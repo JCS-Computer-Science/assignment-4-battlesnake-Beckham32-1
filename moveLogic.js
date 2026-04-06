@@ -1,3 +1,5 @@
+import dstar from "./dstar.js"
+
 export default function move(gameState){
     let moveSafety = {
         up: true,
@@ -6,7 +8,6 @@ export default function move(gameState){
         right: true
     };
     
-    // We've included code to prevent your Battlesnake from moving backwards
     const myHead = gameState.you.body[0];
     const myNeck = gameState.you.body[1];
     
@@ -26,28 +27,27 @@ export default function move(gameState){
     // TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
     // gameState.board contains an object representing the game board including its width and height
     // https://docs.battlesnake.com/api/objects/board
+    checkBounds()
     
     // TODO: Step 2 - Prevent your Battlesnake from colliding with itself
     // gameState.you contains an object representing your snake, including its coordinates
     // https://docs.battlesnake.com/api/objects/battlesnake
+    checkSelf()
     
     
     // TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
     // gameState.board.snakes contains an array of enemy snake objects, which includes their coordinates
     // https://docs.battlesnake.com/api/objects/battlesnake
+    checkOthers()
+
+    // Run D*
     
-    // Are there any safe moves left?
-    
-    //Object.keys(moveSafety) returns ["up", "down", "left", "right"]
-    //.filter() filters the array based on the function provided as an argument (using arrow function syntax here)
-    //In this case we want to filter out any of these directions for which moveSafety[direction] == false
     const safeMoves = Object.keys(moveSafety).filter(direction => moveSafety[direction]);
     if (safeMoves.length == 0) {
         console.log(`MOVE ${gameState.turn}: No safe moves detected! Moving down`);
         return { move: "down" };
     }
     
-    // Choose a random move from the safe moves
     const nextMove = safeMoves[Math.floor(Math.random() * safeMoves.length)];
     
     // TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
@@ -56,3 +56,25 @@ export default function move(gameState){
     console.log(`MOVE ${gameState.turn}: ${nextMove}`)
     return { move: nextMove };
 }
+
+function checkBounds() {
+
+}
+
+function checkSelf() {
+
+}
+
+function checkOthers() {
+
+}
+
+/*
+goal:
+this d* snake should feel dominant and aggressive, taking any opportunity to eliminate other snakes
+
+order:
+    - d* search for path to food, if blocked try different path/food (always running to check for victims)
+    - no food reachable, compare snake length to others to target smaller snakes (attempt to predict locations to eliminate)
+    - 
+*/
