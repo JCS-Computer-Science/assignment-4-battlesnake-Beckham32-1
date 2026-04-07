@@ -17,10 +17,10 @@ const app = express();
 app.use(express.json());
 const config = {
 	apiversion: "1",
-	author: "DSTAR", // Temp
-	color: "#743dff",
-	head: "dead",
-	tail: "mystic-moon",
+	author: "Preemptor",
+	color: "#487417",
+	head: "evil",
+	tail: "hook",
 };
 
 app.get("/", (req, res) => {
@@ -30,17 +30,23 @@ app.get("/", (req, res) => {
 //TODO: respond to POST requests on "/start". Your response itself is ignored, but must have status code "200"
 //      the request body will contain objects representing the game instance, game board state, and your snake
 //      https://docs.battlesnake.com/api/requests/start
+app.post("/start", (req, res) => {
+	res.status(200)
+})
 
 //TODO: respond to POST requests on "/move". Your response should be an object with a "move" property and optionally
 //      a "shout" property. The request body again contains objects representing the game state
 //      https://docs.battlesnake.com/api/requests/move
-app.post("/", (req, res) => {
+app.post("/move", (req, res) => {
 	res.json(move(req.body))
 })
 
 //TODO: respond to POST requests on "/end", which signals the end of a game. Your response itself is ignored,
 //      but must have status code "200" the request body will contain objects representing the game
 //      https://docs.battlesnake.com/api/requests/end
+app.post("/end", (req, res) => {
+	res.status(200)
+})
 
 const host = "0.0.0.0";
 const port = process.env.PORT || 8000;

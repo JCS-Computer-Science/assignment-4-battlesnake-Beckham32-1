@@ -1,80 +1,129 @@
-import dstar from "./dstar.js"
+export default function move(gameState) {
+  const snake = {
+    move_safety: {
+      up: true,
+      down: true,
+      left: true,
+      right: true,
+    },
+    head: gameState.you.head, // First item in body array
+    body: gameState.you.body[1], // Second item in body array
+    tail: gameState.you.body.slice(2), // All following items after head and body
+    length: gameState.you.body.length,
+  };
 
-export default function move(gameState){
-    let moveSafety = {
-        up: true,
-        down: true,
-        left: true,
-        right: true
-    };
-    
-    const myHead = gameState.you.body[0];
-    const myNeck = gameState.you.body[1];
-    
-    if (myNeck.x < myHead.x) {        // Neck is left of head, don't move left
-        moveSafety.left = false;
-        
-    } else if (myNeck.x > myHead.x) { // Neck is right of head, don't move right
-        moveSafety.right = false;
-        
-    } else if (myNeck.y < myHead.y) { // Neck is below head, don't move down
-        moveSafety.down = false;
-        
-    } else if (myNeck.y > myHead.y) { // Neck is above head, don't move up
-        moveSafety.up = false;
+  // Prevent snake from running into world border
+  checkBounds(snake, gameState.board);
+  // Prevent snake from colliding with itself
+  checkSelf(snake);
+  // Prevent snake from colliding with other snakes
+  checkOthers(snake, gameState.board.snakes);
+
+  // Filter out unsafe moves
+  const safeMoves = Object.keys(snake.move_safety).filter(
+    (direction) => snake.move_safety[direction],
+  );
+
+  console.log("HELLO");
+  // Move towards food if it's safe to do so
+  const nextMove = moveTowardsFood(snake, gameState.board.food[0]);
+  const preferred = ["down", "left", "right", "up"];
+  const finalMove =
+    nextMove && safeMoves.includes(nextMove)
+      ? nextMove
+      : preferred.find((dir) => safeMoves.includes(dir)) || safeMoves[0];
+  return { move: finalMove };
+}
+
+function checkBounds(snake, board) {
+  snake.move_safety.left =
+    snake.head.x - 1 < 0 ? false : snake.move_safety.left;
+  snake.move_safety.right =
+    snake.head.x + 1 >= board.width ? false : snake.move_safety.right;
+  snake.move_safety.up = snake.head.y - 1 < 0 ? false : snake.move_safety.up;
+  snake.move_safety.down =
+    snake.head.y + 1 >= board.height ? false : snake.move_safety.down;
+}
+
+function checkSelf(snake) {
+  // Prevent moving into neck
+  if (snake.body.x === snake.head.x - 1 && snake.body.y === snake.head.y) {
+    snake.move_safety.left = false;
+  }
+  if (snake.body.x === snake.head.x + 1 && snake.body.y === snake.head.y) {
+    snake.move_safety.right = false;
+  }
+  if (snake.body.x === snake.head.x && snake.body.y === snake.head.y - 1) {
+    snake.move_safety.up = false;
+  }
+  if (snake.body.x === snake.head.x && snake.body.y === snake.head.y + 1) {
+    snake.move_safety.down = false;
+  }
+
+  // Prevent moving into tail parts
+  for (const part of snake.tail) {
+    if (part.x === snake.head.x - 1 && part.y === snake.head.y) {
+      snake.move_safety.left = false;
     }
-    
-    // TODO: Step 1 - Prevent your Battlesnake from moving out of bounds
-    // gameState.board contains an object representing the game board including its width and height
-    // https://docs.battlesnake.com/api/objects/board
-    checkBounds()
-    
-    // TODO: Step 2 - Prevent your Battlesnake from colliding with itself
-    // gameState.you contains an object representing your snake, including its coordinates
-    // https://docs.battlesnake.com/api/objects/battlesnake
-    checkSelf()
-    
-    
-    // TODO: Step 3 - Prevent your Battlesnake from colliding with other Battlesnakes
-    // gameState.board.snakes contains an array of enemy snake objects, which includes their coordinates
-    // https://docs.battlesnake.com/api/objects/battlesnake
-    checkOthers()
-
-    // Run D*
-    
-    const safeMoves = Object.keys(moveSafety).filter(direction => moveSafety[direction]);
-    if (safeMoves.length == 0) {
-        console.log(`MOVE ${gameState.turn}: No safe moves detected! Moving down`);
-        return { move: "down" };
+    if (part.x === snake.head.x + 1 && part.y === snake.head.y) {
+      snake.move_safety.right = false;
     }
-    
-    const nextMove = safeMoves[Math.floor(Math.random() * safeMoves.length)];
-    
-    // TODO: Step 4 - Move towards food instead of random, to regain health and survive longer
-    // gameState.board.food contains an array of food coordinates https://docs.battlesnake.com/api/objects/board
-    
-    console.log(`MOVE ${gameState.turn}: ${nextMove}`)
-    return { move: nextMove };
+    if (part.x === snake.head.x && part.y === snake.head.y - 1) {
+      snake.move_safety.up = false;
+    }
+    if (part.x === snake.head.x && part.y === snake.head.y + 1) {
+      snake.move_safety.down = false;
+    }
+  }
 }
 
-function checkBounds() {
-
+function checkOthers(snake, other_snakes) {
+  for (const other_snake of other_snakes) {
+    for (const body_part of other_snake.body) {
+      snake.move_safety.left =
+        body_part.x === snake.head.x - 1 && body_part.y === snake.head.y
+          ? false
+          : snake.move_safety.left;
+      snake.move_safety.right =
+        body_part.x === snake.head.x + 1 && body_part.y === snake.head.y
+          ? false
+          : snake.move_safety.right;
+      snake.move_safety.up =
+        body_part.x === snake.head.x && body_part.y === snake.head.y - 1
+          ? false
+          : snake.move_safety.up;
+      snake.move_safety.down =
+        body_part.x === snake.head.x && body_part.y === snake.head.y + 1
+          ? false
+          : snake.move_safety.down;
+    }
+  }
 }
 
-function checkSelf() {
+function moveTowardsFood(snake, food) {
+  if (!food) return;
+  const dx = food.x - snake.head.x;
+  const dy = food.y - snake.head.y;
 
+  // Prefer the direction that reduces the larger distance first
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx < 0 && snake.move_safety.left) {
+      return "left";
+    } else if (dx > 0 && snake.move_safety.right) {
+      return "right";
+    }
+  }
+  if (dy < 0 && snake.move_safety.up) {
+    return "up";
+  } else if (dy > 0 && snake.move_safety.down) {
+    return "down";
+  }
+  if (dx < 0 && snake.move_safety.left) {
+    return "left";
+  } else if (dx > 0 && snake.move_safety.right) {
+    return "right";
+  }
+
+  // If no preferred move, return undefined
+  return undefined;
 }
-
-function checkOthers() {
-
-}
-
-/*
-goal:
-this d* snake should feel dominant and aggressive, taking any opportunity to eliminate other snakes
-
-order:
-    - d* search for path to food, if blocked try different path/food (always running to check for victims)
-    - no food reachable, compare snake length to others to target smaller snakes (attempt to predict locations to eliminate)
-    - 
-*/
