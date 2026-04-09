@@ -10,7 +10,7 @@
 // To get you started we've included code to prevent your Battlesnake from moving backwards.
 // For more info see docs.battlesnake.com
 import express from "express";
-import move from "./moveLogic.js";
+import move from "./main.js";
 import req from "express/lib/request.js";
 
 const app = express();
