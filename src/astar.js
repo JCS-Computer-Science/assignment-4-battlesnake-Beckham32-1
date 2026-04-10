@@ -1,3 +1,34 @@
+class Graph {
+  constructor(grid, options) {
+    options = options || {};
+    this.diagonal = !!options.diagonal;
+    this.grid = grid;
+    this.height = grid.length;
+    this.width = grid[0].length;
+    this.nodes = [];
+
+    for (let x = 0; x < this.width; x++) {
+      this.nodes[x] = [];
+
+      for (let y = 0; y < this.height; y++) {
+        this.nodes[x][y] = new GridNode(x, y, grid[x][y]);
+      }
+    }
+  }
+}
+
+class GridNode {
+  constructor(x, y, weight) {
+    this.x = x;
+    this.y = y;
+    this.weight = weight;
+  }
+
+  isWall() {
+    return this.weight === 0;
+  }
+}
+
 export const astar = {
   init: function (grid) {
     for (let x = 0, xl = grid.length; x < xl; x++) {
@@ -13,43 +44,96 @@ export const astar = {
       }
     }
   },
-  run: function (snake) {
-    const graph = new Graph([
-      [1, 1, 1, 1],
-      [0, 1, 1, 0],
-      [0, 0, 1, 1],
-    ]);
-    var start = graph.grid[0][0];
-    var end = graph.grid[1][2];
-    let result = astar.search(graph, start, end);
-    // result is an array containing the shortest path
-    var graphDiagonal = new Graph(
-      [
-        [1, 1, 1, 1],
-        [0, 1, 1, 0],
-        [0, 0, 1, 1],
-      ],
-      { diagonal: true },
+  run: function (snake, targets, grid) {
+    if (
+      !Array.isArray(grid) &&
+      Array.isArray(targets) &&
+      targets.length &&
+      Array.isArray(targets[0])
+    ) {
+      grid = targets;
+      targets = null;
+    }
+
+    if (!grid || !grid.length) {
+      return [];
+    }
+
+    const searchableGrid = grid.map((column) =>
+      column.map((cell) => (cell === 0 ? 1 : 0)),
     );
 
-    var start = graphDiagonal.grid[0][0];
-    var end = graphDiagonal.grid[1][2];
-    var resultWithDiagonals = astar.search(graphDiagonal, start, end, {
-      heuristic: astar.heuristics.diagonal,
-    });
-    // Weight can easily be added by increasing the values within the graph, and where 0 is infinite (a wall)
-    var graphWithWeight = new Graph([
-      [1, 1, 2, 30],
-      [0, 4, 1.3, 0],
-      [0, 0, 5, 1],
-    ]);
-    var startWithWeight = graphWithWeight.grid[0][0];
-    var endWithWeight = graphWithWeight.grid[1][2];
-    var resultWithWeight = astar.search(
-      graphWithWeight,
-      startWithWeight,
-      endWithWeight,
-    );
+    if (
+      snake.head.x < 0 ||
+      snake.head.x >= searchableGrid.length ||
+      snake.head.y < 0 ||
+      snake.head.y >= searchableGrid[0].length
+    ) {
+      return [];
+    }
+
+    searchableGrid[snake.head.x][snake.head.y] = 1;
+    const graph = new Graph(searchableGrid);
+    const start = graph.grid[snake.head.x][snake.head.y];
+
+    const targetPoints = targets
+      ? targets
+          .map((target) => {
+            if (
+              target &&
+              typeof target.x === "number" &&
+              typeof target.y === "number"
+            ) {
+              return { x: target.x, y: target.y, type: "food" };
+            }
+            if (target && target.head) {
+              return { x: target.head.x, y: target.head.y, type: "enemy" };
+            }
+            return null;
+          })
+          .filter(Boolean)
+      : [
+          ...snake.board.food.map((food) => ({
+            x: food.x,
+            y: food.y,
+            type: "food",
+          })),
+          ...snake.board.snakes
+            .filter((other) => other.id !== snake.game.you.id)
+            .map((other) => ({
+              x: other.head.x,
+              y: other.head.y,
+              type: "enemy",
+            })),
+        ];
+
+    const possiblePaths = targetPoints
+      .map((target) => {
+        if (
+          target.x < 0 ||
+          target.x >= graph.width ||
+          target.y < 0 ||
+          target.y >= graph.height
+        ) {
+          return null;
+        }
+
+        const end = graph.grid[target.x][target.y];
+        if (!end || end.isWall()) {
+          return null;
+        }
+
+        const path = astar.search(graph, start, end);
+        return path.length ? { path, target } : null;
+      })
+      .filter(Boolean);
+
+    if (!possiblePaths.length) {
+      return [];
+    }
+
+    possiblePaths.sort((a, b) => a.path.length - b.path.length);
+    return possiblePaths[0].path;
   },
   heap: function () {
     return new BinaryHeap(function (node) {
@@ -66,10 +150,8 @@ export const astar = {
     openHeap.push(start);
 
     while (openHeap.size() > 0) {
-      // Grab the lowest f(x) to process next.  Heap keeps this sorted for us.
       let currentNode = openHeap.pop();
 
-      // End case -- result has been found, return the traced path.
       if (currentNode === end) {
         let curr = currentNode;
         let ret = [];
@@ -80,45 +162,35 @@ export const astar = {
         return ret.reverse();
       }
 
-      // Normal case -- move currentNode from open to closed, process each of its neighbors.
       currentNode.closed = true;
-
-      // Find all neighbors for the current node. Optionally find diagonal neighbors as well (false by default).
       let neighbors = astar.neighbors(grid, currentNode, diagonal);
 
       for (let i = 0, il = neighbors.length; i < il; i++) {
         let neighbor = neighbors[i];
 
         if (neighbor.closed || neighbor.isWall()) {
-          // Not a valid node to process, skip to next neighbor.
           continue;
         }
 
-        // The g score is the shortest distance from start to current node.
-        // We need to check if the path we have arrived at this neighbor is the shortest one we have seen yet.
         let gScore = currentNode.g + neighbor.cost;
         let beenVisited = neighbor.visited;
 
         if (!beenVisited || gScore < neighbor.g) {
-          // Found an optimal (so far) path to this node.  Take score for node to see how good it is.
           neighbor.visited = true;
           neighbor.parent = currentNode;
-          neighbor.h = neighbor.h || heuristic(neighbor.pos, end.pos);
+          neighbor.h = neighbor.h || heuristic(neighbor, end);
           neighbor.g = gScore;
           neighbor.f = neighbor.g + neighbor.h;
 
           if (!beenVisited) {
-            // Pushing to heap will put it in proper place based on the 'f' value.
             openHeap.push(neighbor);
           } else {
-            // Already seen the node, but since it has been rescored we need to reorder it in the heap
             openHeap.rescoreElement(neighbor);
           }
         }
       }
     }
 
-    // No result was found - empty array signifies failure to find path.
     return [];
   },
   manhattan: function (pos0, pos1) {

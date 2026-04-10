@@ -10,29 +10,33 @@
 // To get you started we've included code to prevent your Battlesnake from moving backwards.
 // For more info see docs.battlesnake.com
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import move from "./main.js";
-import req from "express/lib/request.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
 const config = {
 	apiversion: "1",
 	author: "Preemptor",
-	color: "#487417",
-	head: "evil",
-	tail: "hook",
+	color: "#3479b1",
+	head: "all-seeing",
+	tail: "mystic-moon",
 };
 
 app.get("/", (req, res) => {
-	res.json(config)
-})
+	res.json(config);
+});
 
-//TODO: respond to POST requests on "/start". Your response itself is ignored, but must have status code "200"
-//      the request body will contain objects representing the game instance, game board state, and your snake
-//      https://docs.battlesnake.com/api/requests/start
+app.get("/debug", (req, res) => {
+	res.sendFile(path.join(__dirname, "index.html"));
+});
+
 app.post("/start", (req, res) => {
-	res.status(200)
-})
+	res.sendStatus(200);
+});
 
 //TODO: respond to POST requests on "/move". Your response should be an object with a "move" property and optionally
 //      a "shout" property. The request body again contains objects representing the game state
@@ -45,8 +49,8 @@ app.post("/move", (req, res) => {
 //      but must have status code "200" the request body will contain objects representing the game
 //      https://docs.battlesnake.com/api/requests/end
 app.post("/end", (req, res) => {
-	res.status(200)
-})
+	res.sendStatus(200);
+});
 
 const host = "0.0.0.0";
 const port = process.env.PORT || 8000;
