@@ -1,36 +1,5 @@
-class Graph {
-  constructor(grid, options) {
-    options = options || {};
-    this.diagonal = !!options.diagonal;
-    this.grid = grid;
-    this.height = grid.length;
-    this.width = grid[0].length;
-    this.nodes = [];
-
-    for (let x = 0; x < this.width; x++) {
-      this.nodes[x] = [];
-
-      for (let y = 0; y < this.height; y++) {
-        this.nodes[x][y] = new GridNode(x, y, grid[x][y]);
-      }
-    }
-  }
-}
-
-class GridNode {
-  constructor(x, y, weight) {
-    this.x = x;
-    this.y = y;
-    this.weight = weight;
-  }
-
-  isWall() {
-    return this.weight === 0;
-  }
-}
-
-export const astar = {
-  init: function (grid) {
+class Astar {
+  static init(grid) {
     for (let x = 0, xl = grid.length; x < xl; x++) {
       for (let y = 0, yl = grid[x].length; y < yl; y++) {
         let node = grid[x][y];
@@ -43,8 +12,9 @@ export const astar = {
         node.parent = null;
       }
     }
-  },
-  run: function (snake, targets, grid) {
+  }
+
+  static run(snake, targets, grid) {
     if (
       !Array.isArray(grid) &&
       Array.isArray(targets) &&
@@ -123,7 +93,7 @@ export const astar = {
           return null;
         }
 
-        const path = astar.search(graph, start, end);
+        const path = Astar.search(graph, start, end);
         return path.length ? { path, target } : null;
       })
       .filter(Boolean);
@@ -134,18 +104,20 @@ export const astar = {
 
     possiblePaths.sort((a, b) => a.path.length - b.path.length);
     return possiblePaths[0].path;
-  },
-  heap: function () {
+  }
+
+  static heap() {
     return new BinaryHeap(function (node) {
       return node.f;
     });
-  },
-  search: function (grid, start, end, diagonal, heuristic) {
-    astar.init(grid);
-    heuristic = heuristic || astar.manhattan;
+  }
+
+  static search(grid, start, end, diagonal, heuristic) {
+    Astar.init(grid);
+    heuristic = heuristic || Astar.manhattan;
     diagonal = !!diagonal;
 
-    let openHeap = astar.heap();
+    let openHeap = Astar.heap();
 
     openHeap.push(start);
 
@@ -163,7 +135,7 @@ export const astar = {
       }
 
       currentNode.closed = true;
-      let neighbors = astar.neighbors(grid, currentNode, diagonal);
+      let neighbors = Astar.neighbors(grid, currentNode, diagonal);
 
       for (let i = 0, il = neighbors.length; i < il; i++) {
         let neighbor = neighbors[i];
@@ -192,15 +164,15 @@ export const astar = {
     }
 
     return [];
-  },
-  manhattan: function (pos0, pos1) {
-    // See list of heuristics: http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
+  }
 
+  static manhattan(pos0, pos1) {
     let d1 = Math.abs(pos1.x - pos0.x);
     let d2 = Math.abs(pos1.y - pos0.y);
     return d1 + d2;
-  },
-  neighbors: function (grid, node, diagonals) {
+  }
+
+  static neighbors(grid, node, diagonals) {
     let ret = [];
     let x = node.x;
     let y = node.y;
@@ -248,5 +220,104 @@ export const astar = {
     }
 
     return ret;
-  },
-};
+  }
+}
+
+export const astar = Astar;
+
+// Helper classes for Astar algorithm
+class Graph {
+  constructor(grid, options) {
+    options = options || {};
+    this.diagonal = !!options.diagonal;
+    this.grid = grid;
+    this.height = grid.length;
+    this.width = grid[0].length;
+    this.nodes = [];
+
+    for (let x = 0; x < this.width; x++) {
+      this.nodes[x] = [];
+
+      for (let y = 0; y < this.height; y++) {
+        this.nodes[x][y] = new GridNode(x, y, grid[x][y]);
+      }
+    }
+  }
+}
+
+class GridNode {
+  constructor(x, y, weight) {
+    this.x = x;
+    this.y = y;
+    this.weight = weight;
+  }
+
+  isWall() {
+    return this.weight === 0;
+  }
+}
+
+class BinaryHeap {
+  constructor(scoreFunction) {
+    this.content = [];
+    this.scoreFunction = scoreFunction;
+  }
+  push(element) {
+    this.content.push(element);
+    this.bubbleUp(this.content.length - 1);
+  }
+  pop() {
+    const result = this.content[0];
+    const end = this.content.pop();
+    if (this.content.length > 0) {
+      this.content[0] = end;
+      this.sinkDown(0);
+    }
+    return result;
+  }
+  size() {
+    return this.content.length;
+  }
+  rescoreElement(node) {
+    this.sinkDown(this.content.indexOf(node));
+  }
+  bubbleUp(n) {
+    const element = this.content[n];
+    const score = this.scoreFunction(element);
+    while (n > 0) {
+      const parentN = Math.floor((n + 1) / 2) - 1;
+      const parent = this.content[parentN];
+      if (score >= this.scoreFunction(parent)) break;
+      this.content[parentN] = element;
+      this.content[n] = parent;
+      n = parentN;
+    }
+  }
+  sinkDown(n) {
+    const length = this.content.length;
+    const element = this.content[n];
+    const elemScore = this.scoreFunction(element);
+
+    while (true) {
+      const child2N = (n + 1) * 2;
+      const child1N = child2N - 1;
+      let swap = null;
+      let child1Score;
+      if (child1N < length) {
+        const child1 = this.content[child1N];
+        child1Score = this.scoreFunction(child1);
+        if (child1Score < elemScore) swap = child1N;
+      }
+      if (child2N < length) {
+        const child2 = this.content[child2N];
+        const child2Score = this.scoreFunction(child2);
+        if (child2Score < (swap == null ? elemScore : child1Score))
+          swap = child2N;
+      }
+      if (swap == null) break;
+      this.content[n] = this.content[swap];
+      this.content[swap] = element;
+      n = swap;
+    }
+  }
+}

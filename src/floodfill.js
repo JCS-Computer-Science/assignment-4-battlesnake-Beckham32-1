@@ -1,35 +1,41 @@
 export default function flood(snake) {
-  // 0 = empty, 2 = other snake body, 4 = own snake body
   const grid = Array.from({ length: snake.board.width }, () =>
     Array.from({ length: snake.board.height }, () => 0),
   );
 
-  for (const other of snake.board.snakes) {
-    const self = other === snake.game.you || other.id === snake.game.you.id;
-    const marker = self ? 4 : 2;
-    for (const part of other.body) {
-      grid[part.x][part.y] = marker;
+  // Mark hazards as dangerous (1)
+  if (snake.board.hazards) {
+    for (const hazard of snake.board.hazards) {
+      grid[(hazard.x, hazard.y)] = 1;
     }
   }
 
-  dfs(grid, snake.head.x, snake.head.y, 1, grid[snake.head.x][snake.head.y]);
+  // Mark all snake bodies as dangerous (1)
+  for (const other of snake.board.snakes) {
+    for (const part of other.body) {
+      grid[part.x][part.y] = 1;
+    }
+  }
+
+  // Perform flood fill from head to mark reachable empty squares as safe (2)
+  dfs(grid, snake.head.x, snake.head.y);
   return grid;
 }
 
-function dfs(grid, x, y, target, start) {
+function dfs(grid, x, y) {
   if (
     x < 0 ||
     x >= grid.length ||
     y < 0 ||
     y >= grid[0].length ||
-    grid[x][y] !== target
+    grid[x][y] !== 0
   ) {
     return;
   }
 
-  grid[x][y] = target;
-  dfs(grid, x + 1, y, target, start);
-  dfs(grid, x - 1, y, target, start);
-  dfs(grid, x, y + 1, target, start);
-  dfs(grid, x, y - 1, target, start);
+  grid[x][y] = 2;
+  dfs(grid, x + 1, y);
+  dfs(grid, x - 1, y);
+  dfs(grid, x, y + 1);
+  dfs(grid, x, y - 1);
 }

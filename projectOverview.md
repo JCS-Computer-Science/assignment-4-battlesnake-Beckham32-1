@@ -85,47 +85,10 @@ Subject to change:
 
 ## Current Bugs and Issues
 
-I was too lazy to fix these problems or finish parts of the logic
-
-1. **`collision.js`** contains several bugs:
-   - walls() assigns snake.moves.left = snake.head.x <= 0, which is backwards.
-   - self() and others() repeatedly overwrite snake.moves for every body segment instead of disabling only the relevant direction.
-   - The code uses direct coordinate comparisons for entire move state instead of checking the specific target cell.
-   - Result: collision filtering can be wrong, and safe moves may be miscomputed.
-
-   _Should be easier to debug once everything is fully written and I can get to testing_
-
-2. **`floodfill.js`** appears to be broken:
-   - dfs(grid, snake.head.x, snake.head.y, 1, grid[snake.head.x][snake.head.y])
-   - The target passed to dfs is 1, while the head cell is typically 4.
-     This means the DFS likely does nothing, so the floodfill does not produce a meaningful reachable-space map.
-
-   _Should be easier to debug once everything is fully written and I can get to testing_
-
-3. **`astar.js`** is missing logic:
-   - Maps the floodfill grid into a binary passable/wall grid
-   - Finds the nearest food or enemy head target
-   - Returns a path array
-     However:
-   - The repository does not include a BinaryHeap implementation in astar.js or elsewhere, so astar.search() may fail at runtime.
-   - astar.run() returns a path but the path is not used by main.js to modify score values.
-   - There is no weighting for distance or move preference in the returned path.
-
-   _This whole algorithm is complicated, I just need to do more research and spend more time with it_
-
-4. **`score.js`** is too simple:
-   - valid move → keep current score or 0
-   - invalid move → -Infinity
-     This means move choice depends mostly on whether moves are allowed, not on real path or food value.
-
-   _Kind of obvious as it was just temp anyway but does need to be fixed_
-
-5. Debug frontend is unfinished
-   - `index.html` is a good local tester, but it only tests the sample hard-coded state.
-   - It does not validate the actual Battlesnake board state format beyond simple rendering.
-   - The backend /move endpoint returns whatever main.js chooses, but the debug page may hide whether the move logic is truly safe in other states.
-
-   _Again just need more of the logic to be written for this to be more functional_
+1. Debug frontend is unfinished
+   - does not actually run
+   - nothing other than snake objects to aid in debugging
+     - pathfinding trace, floodfill overlay, trajectory
 
 ---
 
