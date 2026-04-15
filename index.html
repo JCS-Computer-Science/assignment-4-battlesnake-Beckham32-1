@@ -146,29 +146,8 @@
         color: #a8b1cf;
       }
       .footer {
-        padding: 0 1rem 1rem;
+        padding: 1rem;
         color: #8c97bf;
-      }
-      #top {
-        position: sticky;
-        top: 1rem;
-        left: calc(100% - 4rem);
-        padding-top: 1rem;
-        margin: 2rem 0 0;
-        background: #2b3364;
-        color: #f9fbff;
-        border: none;
-        border-radius: 100%;
-        width: 50px;
-        height: 50px;
-        font-size: 1.2rem;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        box-shadow:
-          0 4px 12px rgba(43, 51, 100, 0.3),
-          0 8px 24px rgba(43, 51, 100, 0.2);
       }
     </style>
   </head>
@@ -181,15 +160,14 @@
         with the full backend information.
       </p>
     </header>
-    <button id="top">^</button>
     <main>
       <div class="content">
         <section class="panel" style="height: 90%">
           <div class="button-row">
+            <button id="renderBoardBtn">Render Board</button>
             <button id="playBtn">Play</button>
-            <button id="renderBoardBtn">Render</button>
-            <button id="showStateBtn">Display Game State</button>
-            <button id="moveRequestBtn">Move Request</button>
+            <button id="pauseBtn">Pause</button>
+            <button id="stepBtn">Step</button>
           </div>
           <div class="details" id="summaryPanel"></div>
           <div
@@ -213,18 +191,14 @@
           </div>
           <div style="display: grid; gap: 1rem">
             <div>
-              <h3>Move Response</h3>
-              <pre id="moveResponse">No request sent yet.</pre>
-            </div>
-            <div>
               <h3>Safe move analysis</h3>
               <pre id="moveAnalysis">
 Press Render Board to calculate safe moves.</pre
               >
             </div>
             <div>
-              <h3>Raw Sample Game State</h3>
-              <pre id="rawState">Hidden until requested.</pre>
+              <h3>Move Response</h3>
+              <pre id="moveResponse">No request sent yet.</pre>
             </div>
           </div>
         </section>
@@ -249,7 +223,7 @@ Press Render Board to calculate safe moves.</pre
           snakes: [
             {
               id: "you",
-              name: "DebugSnake",
+              name: "PreV1",
               health: 91,
               body: [
                 { x: 5, y: 5 },
@@ -278,7 +252,7 @@ Press Render Board to calculate safe moves.</pre
         },
         you: {
           id: "you",
-          name: "DebugSnake",
+          name: "PreV1",
           health: 91,
           body: [
             { x: 5, y: 5 },
@@ -295,7 +269,6 @@ Press Render Board to calculate safe moves.</pre
       const summaryPanel = document.getElementById("summaryPanel");
       const moveResponse = document.getElementById("moveResponse");
       const moveAnalysis = document.getElementById("moveAnalysis");
-      const rawState = document.getElementById("rawState");
 
       const getCellKey = (x, y) => `${x},${y}`;
 
@@ -369,7 +342,7 @@ Press Render Board to calculate safe moves.</pre
                 : type === "hazard"
                   ? "Death"
                   : type === "you-head"
-                    ? "Me"
+                    ? "PreV1"
                     : type === "enemy-head"
                       ? "Enemy"
                       : type === "you-body" || type === "enemy-body"
@@ -390,14 +363,13 @@ Press Render Board to calculate safe moves.</pre
         summaryPanel.innerHTML = `
                 <div class="item"><strong>Turn</strong><span>${sampleState.turn}</span></div>
                 <div class="item"><strong>Board</strong><span>${width} × ${height}</span></div>
-                <div class="item"><strong>Your Health</strong><span>${sampleState.you.health}</span></div>
+                <div class="item"><strong>${sampleState.you.name} Health</strong><span>${sampleState.you.health}</span></div>
                 <div class="item"><strong>Food</strong><span>${sampleState.board.food.length}</span></div>
                 <div class="item"><strong>Snakes</strong><span>${sampleState.board.snakes.length}</span></div>
                 <div class="item"><strong>Safe Moves</strong><span>${Object.values(safeMoves).filter(Boolean).length}</span></div>
             `;
 
         moveAnalysis.textContent = safeStrings;
-        rawState.textContent = JSON.stringify(sampleState, null, 2);
       }
 
       async function sendMoveRequest() {
@@ -414,26 +386,146 @@ Press Render Board to calculate safe moves.</pre
             null,
             2,
           );
+          return data;
         } catch (error) {
           moveResponse.textContent = `Request failed: ${error.message}`;
+          throw error;
         }
+      }
+
+      const loopIntervalMs = 500;
+      let gameLoopInterval = null;
+      let advanceInProgress = false;
+
+      const directionVectors = {
+        up: { x: 0, y: 1 },
+        down: { x: 0, y: -1 },
+        left: { x: -1, y: 0 },
+        right: { x: 1, y: 0 },
+      };
+
+      function applyMove(move) {
+        const vector = directionVectors[move];
+        if (!vector) {
+          throw new Error(`Invalid move received: ${move}`);
+        }
+
+        const head = sampleState.you.head;
+        const newHead = {
+          x: head.x + vector.x,
+          y: head.y + vector.y,
+        };
+
+        const width = sampleState.board.width;
+        const height = sampleState.board.height;
+        if (
+          newHead.x < 0 ||
+          newHead.x >= width ||
+          newHead.y < 0 ||
+          newHead.y >= height
+        ) {
+          throw new Error("Move would leave the board.");
+        }
+
+        const foodIndex = sampleState.board.food.findIndex(
+          (food) => food.x === newHead.x && food.y === newHead.y,
+        );
+        const ateFood = foodIndex !== -1;
+
+        const blocked = new Set();
+        sampleState.board.snakes.forEach((snake) => {
+          snake.body.forEach((segment, index) => {
+            const isOwnTail =
+              snake.id === sampleState.you.id &&
+              index === snake.body.length - 1 &&
+              !ateFood;
+            if (!isOwnTail) {
+              blocked.add(getCellKey(segment.x, segment.y));
+            }
+          });
+        });
+        sampleState.board.hazards.forEach((hazard) =>
+          blocked.add(getCellKey(hazard.x, hazard.y)),
+        );
+
+        if (blocked.has(getCellKey(newHead.x, newHead.y))) {
+          throw new Error("Move would collide with a body or hazard.");
+        }
+
+        const newBody = [{ ...newHead }, ...sampleState.you.body];
+        if (!ateFood) {
+          newBody.pop();
+        } else {
+          sampleState.board.food.splice(foodIndex, 1);
+        }
+
+        sampleState.you.body = newBody;
+        sampleState.you.head = { ...newHead };
+        sampleState.you.length = newBody.length;
+        sampleState.turn += 1;
+        sampleState.you.health = ateFood
+          ? Math.min(100, sampleState.you.health + 20)
+          : sampleState.you.health - 1;
+
+        if (sampleState.you.health <= 0) {
+          throw new Error("Your snake has starved.");
+        }
+
+        const youOnBoard = sampleState.board.snakes.find(
+          (snake) => snake.id === sampleState.you.id,
+        );
+        if (youOnBoard) {
+          youOnBoard.body = newBody;
+          youOnBoard.head = { ...newHead };
+          youOnBoard.health = sampleState.you.health;
+          youOnBoard.length = newBody.length;
+        }
+      }
+
+      async function advanceTurn() {
+        if (advanceInProgress) return;
+        advanceInProgress = true;
+        try {
+          const data = await sendMoveRequest();
+          const move = data?.data?.move ?? data?.move;
+          if (!move) {
+            throw new Error("Backend response did not include a move.");
+          }
+          applyMove(move);
+          renderBoard();
+        } catch (error) {
+          moveResponse.textContent = `Game loop stopped: ${error.message}`;
+          pauseGameLoop();
+        } finally {
+          advanceInProgress = false;
+        }
+      }
+
+      function startGameLoop() {
+        if (gameLoopInterval) return;
+        gameLoopInterval = setInterval(advanceTurn, loopIntervalMs);
+        moveResponse.textContent = "Game loop running...";
+      }
+
+      function pauseGameLoop() {
+        if (!gameLoopInterval) return;
+        clearInterval(gameLoopInterval);
+        gameLoopInterval = null;
+        moveResponse.textContent = "Game loop paused.";
       }
 
       document
         .getElementById("renderBoardBtn")
         .addEventListener("click", renderBoard);
-      document.getElementById("showStateBtn").addEventListener("click", () => {
-        rawState.textContent = JSON.stringify(sampleState, null, 2);
-      });
       document
-        .getElementById("moveRequestBtn")
-        .addEventListener("click", sendMoveRequest);
+        .getElementById("playBtn")
+        .addEventListener("click", startGameLoop);
+      document
+        .getElementById("pauseBtn")
+        .addEventListener("click", pauseGameLoop);
+      document.getElementById("stepBtn").addEventListener("click", advanceTurn);
 
       renderBoard();
-
-      document.getElementById("top").addEventListener("click", () => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
     </script>
   </body>
 </html>
