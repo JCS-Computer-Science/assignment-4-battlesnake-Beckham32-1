@@ -60,6 +60,7 @@
         flex-wrap: wrap;
         gap: 0.75rem;
         margin-bottom: 1rem;
+        align-items: center;
       }
       button {
         border: none;
@@ -76,6 +77,23 @@
       button:hover {
         transform: translateY(-1px);
         background: #3f4aad;
+      }
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: #2b3364;
+        height: 8px;
+        border-radius: 5px;
+        outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #47c6ff;
+        cursor: pointer;
       }
       .board {
         display: grid;
@@ -95,6 +113,7 @@
         font-weight: 700;
         color: #f8fbff;
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        position: relative;
       }
       .cell.empty {
         background: #151a2f;
@@ -136,7 +155,6 @@
         background: rgba(255, 255, 255, 0.03);
         border-radius: 14px;
         max-height: 200px;
-
         padding: 1rem;
         font-size: 0.86rem;
         line-height: 1.5;
@@ -148,6 +166,9 @@
       .footer {
         padding: 1rem;
         color: #8c97bf;
+      }
+      canvas {
+        background: rgba(255, 0, 255, 0.5);
       }
     </style>
   </head>
@@ -164,10 +185,20 @@
       <div class="content">
         <section class="panel" style="height: 90%">
           <div class="button-row">
-            <button id="renderBoardBtn">Render Board</button>
             <button id="playBtn">Play</button>
             <button id="pauseBtn">Pause</button>
             <button id="stepBtn">Step</button>
+            <button id="debugToggleBtn">Show</button>
+            <label for="speedSlider">Speed</label>
+            <input
+              type="range"
+              id="speedSlider"
+              min="100"
+              max="2000"
+              step="100"
+              value="500"
+            />
+            <h3 id="speedValue">500</h3>
           </div>
           <div class="details" id="summaryPanel"></div>
           <div
@@ -175,6 +206,16 @@
             style="padding: 0; background: none; border: none; box-shadow: none"
           >
             <div id="board" class="board"></div>
+            <canvas
+              id="debugCanvas"
+              style="
+                position: relative;
+                top: 0;
+                left: 0;
+                pointer-events: none;
+                z-index: 10;
+              "
+            ></canvas>
           </div>
           <div class="footer">
             Debug page available from <code>/debug</code> when the Battlesnake
@@ -211,15 +252,7 @@ Press Render Board to calculate safe moves.</pre
         board: {
           height: 11,
           width: 11,
-          food: [
-            { x: 2, y: 3 },
-            { x: 9, y: 8 },
-            { x: 5, y: 1 },
-          ],
-          hazards: [
-            { x: 4, y: 4 },
-            { x: 8, y: 2 },
-          ],
+          food: [],
           snakes: [
             {
               id: "you",
@@ -270,6 +303,9 @@ Press Render Board to calculate safe moves.</pre
       const moveResponse = document.getElementById("moveResponse");
       const moveAnalysis = document.getElementById("moveAnalysis");
 
+      let showDebug = false;
+      let debugData = null;
+
       const getCellKey = (x, y) => `${x},${y}`;
 
       function getSafeMoves(state) {
@@ -283,9 +319,11 @@ Press Render Board to calculate safe moves.</pre
             blocked.add(getCellKey(segment.x, segment.y)),
           );
         });
-        state.board.hazards.forEach((hazard) =>
-          blocked.add(getCellKey(hazard.x, hazard.y)),
-        );
+        if (state.board.hazards) {
+          state.board.hazards.forEach((hazard) =>
+            blocked.add(getCellKey(hazard.x, hazard.y)),
+          );
+        }
 
         return {
           up:
@@ -308,13 +346,56 @@ Press Render Board to calculate safe moves.</pre
         );
         boardElement.innerHTML = "";
 
+        // Randomize snakes if not done
+        if (!sampleState.randomized) {
+          board.snakes.forEach((snake) => {
+            let headX, headY;
+            do {
+              headX = Math.floor(Math.random() * width);
+              headY = Math.floor(Math.random() * height);
+            } while (
+              headX < 0 ||
+              headX >= width ||
+              headY < 0 ||
+              headY >= height
+            );
+            snake.head = { x: headX, y: headY };
+            snake.body = [
+              { x: headX, y: headY },
+              { x: headX, y: headY - 1 },
+              { x: headX, y: headY - 2 },
+            ];
+            snake.length = snake.body.length;
+          });
+          sampleState.you = board.snakes[0];
+          sampleState.randomized = true;
+        }
+
+        // Generate food if not present
+        if (board.food.length === 0) {
+          for (let i = 0; i < 3; i++) {
+            let foodX, foodY;
+            let occupied;
+            do {
+              foodX = Math.floor(Math.random() * width);
+              foodY = Math.floor(Math.random() * height);
+              occupied = board.snakes.some((snake) =>
+                snake.body.some((part) => part.x === foodX && part.y === foodY),
+              );
+            } while (occupied);
+            board.food.push({ x: foodX, y: foodY });
+          }
+        }
+
         const cellMap = new Map();
         board.food.forEach((food) =>
           cellMap.set(getCellKey(food.x, food.y), "food"),
         );
-        board.hazards.forEach((hazard) =>
-          cellMap.set(getCellKey(hazard.x, hazard.y), "hazard"),
-        );
+        if (board.hazards) {
+          board.hazards.forEach((hazard) =>
+            cellMap.set(getCellKey(hazard.x, hazard.y), "hazard"),
+          );
+        }
         board.snakes.forEach((snake) => {
           snake.body.forEach((segment, index) => {
             const key = getCellKey(segment.x, segment.y);
@@ -370,6 +451,8 @@ Press Render Board to calculate safe moves.</pre
             `;
 
         moveAnalysis.textContent = safeStrings;
+
+        if (showDebug) renderDebug();
       }
 
       async function sendMoveRequest() {
@@ -393,7 +476,7 @@ Press Render Board to calculate safe moves.</pre
         }
       }
 
-      const loopIntervalMs = 500;
+      let loopIntervalMs = 500;
       let gameLoopInterval = null;
       let advanceInProgress = false;
 
@@ -444,9 +527,11 @@ Press Render Board to calculate safe moves.</pre
             }
           });
         });
-        sampleState.board.hazards.forEach((hazard) =>
-          blocked.add(getCellKey(hazard.x, hazard.y)),
-        );
+        if (sampleState.board.hazards) {
+          sampleState.board.hazards.forEach((hazard) =>
+            blocked.add(getCellKey(hazard.x, hazard.y)),
+          );
+        }
 
         if (blocked.has(getCellKey(newHead.x, newHead.y))) {
           throw new Error("Move would collide with a body or hazard.");
@@ -487,6 +572,7 @@ Press Render Board to calculate safe moves.</pre
         advanceInProgress = true;
         try {
           const data = await sendMoveRequest();
+          debugData = data.debug;
           const move = data?.data?.move ?? data?.move;
           if (!move) {
             throw new Error("Backend response did not include a move.");
@@ -498,6 +584,118 @@ Press Render Board to calculate safe moves.</pre
           pauseGameLoop();
         } finally {
           advanceInProgress = false;
+        }
+      }
+
+      function renderDebug() {
+        // Clear previous overlays
+        boardElement
+          .querySelectorAll(".debug-overlay")
+          .forEach((e) => e.remove());
+        const canvas = document.getElementById("debugCanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (!debugData) return;
+        const { blocked, target, scores, path } = debugData;
+        const width = sampleState.board.width;
+        const height = sampleState.board.height;
+        // Set canvas size
+        const cellSize = 38;
+        const gap = 4;
+        const boardWidth = width * cellSize + (width - 1) * gap;
+        const boardHeight = height * cellSize + (height - 1) * gap;
+        canvas.width = boardWidth;
+        canvas.height = boardHeight;
+        canvas.style.width = boardWidth + "px";
+        canvas.style.height = boardHeight + "px";
+        // Find min max scores
+        let minScore = Infinity,
+          maxScore = -Infinity;
+        for (let x = 0; x < width; x++) {
+          for (let y = 0; y < height; y++) {
+            const s = scores[x][y];
+            if (s !== 0 && s > -Infinity) {
+              if (s < minScore) minScore = s;
+              if (s > maxScore) maxScore = s;
+            }
+          }
+        }
+        // For each cell
+        for (let y = height - 1; y >= 0; y--) {
+          for (let x = 0; x < width; x++) {
+            const cellIndex = (height - 1 - y) * width + x;
+            const cell = boardElement.children[cellIndex];
+            // Blocked
+            if (blocked.some((b) => b.x === x && b.y === y)) {
+              const overlay = document.createElement("div");
+              overlay.className = "debug-overlay";
+              overlay.style.position = "absolute";
+              overlay.style.top = "5%";
+              overlay.style.left = "5%";
+              overlay.style.width = "90%";
+              overlay.style.height = "90%";
+              overlay.style.background = "black";
+              // overlay.style.opacity = "0.8";
+              overlay.style.borderRadius = "10px";
+              cell.appendChild(overlay);
+            }
+            // Target
+            if (target && target.x === x && target.y === y) {
+              const overlay = document.createElement("div");
+              overlay.className = "debug-overlay";
+              overlay.style.position = "absolute";
+              overlay.style.top = "50%";
+              overlay.style.left = "50%";
+              overlay.style.transform = "translate(-50%, -50%)";
+              overlay.style.color = "red";
+              overlay.style.fontSize = "24px";
+              overlay.style.fontWeight = "bold";
+              overlay.style.textShadow = "0 0 2px black";
+              overlay.textContent = "X";
+              cell.appendChild(overlay);
+            }
+            // Scores
+            const s = scores[x][y];
+            if (
+              s !== 0 &&
+              s > -Infinity &&
+              !(x === sampleState.you.head.x && y === sampleState.you.head.y)
+            ) {
+              const ratio =
+                maxScore > minScore
+                  ? (s - minScore) / (maxScore - minScore)
+                  : 0;
+              const hue = (1 - ratio) * 120; // 120 green, 0 red
+              const color = `hsl(${hue}, 100%, 50%)`;
+              const overlay = document.createElement("div");
+              overlay.className = "debug-overlay";
+              overlay.style.position = "absolute";
+              overlay.style.top = "0";
+              overlay.style.left = "0";
+              overlay.style.background = color;
+              overlay.style.fontSize = "12px";
+              overlay.style.width = "100%";
+              overlay.style.height = "100%";
+              overlay.style.textShadow = "0 0 2px black";
+              overlay.style.borderRadius = "4px";
+              overlay.textContent = s.toFixed(0);
+              cell.appendChild(overlay);
+            }
+          }
+        }
+        // Path
+        if (path && path.length > 1) {
+          ctx.strokeStyle = "blue";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          for (let i = 0; i < path.length; i++) {
+            const p = path[i];
+            const cx = 12 + p.x * (cellSize + gap) + cellSize / 2;
+            const cy = 12 + (height - 1 - p.y) * (cellSize + gap) + cellSize / 2;
+            if (i === 0) ctx.moveTo(cx, cy);
+            else ctx.lineTo(cx, cy);
+          }
+          ctx.stroke();
         }
       }
 
@@ -515,16 +713,29 @@ Press Render Board to calculate safe moves.</pre
       }
 
       document
-        .getElementById("renderBoardBtn")
-        .addEventListener("click", renderBoard);
-      document
         .getElementById("playBtn")
         .addEventListener("click", startGameLoop);
       document
         .getElementById("pauseBtn")
         .addEventListener("click", pauseGameLoop);
       document.getElementById("stepBtn").addEventListener("click", advanceTurn);
-
+      document
+        .getElementById("debugToggleBtn")
+        .addEventListener("click", () => {
+          showDebug = !showDebug;
+          document.getElementById("debugToggleBtn").textContent = showDebug
+            ? "Hide"
+            : "Show";
+          renderDebug();
+        });
+      document.getElementById("speedSlider").addEventListener("input", () => {
+        loopIntervalMs = parseInt(document.getElementById("speedSlider").value);
+        if (gameLoopInterval) {
+          clearInterval(gameLoopInterval);
+          gameLoopInterval = setInterval(advanceTurn, loopIntervalMs);
+        }
+        document.getElementById("speedValue").textContent = loopIntervalMs;
+      });
       renderBoard();
     </script>
   </body>

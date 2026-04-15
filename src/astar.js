@@ -44,7 +44,7 @@ class Astar {
 
     searchableGrid[snake.head.x][snake.head.y] = 1;
     const graph = new Graph(searchableGrid);
-    const start = graph.grid[snake.head.x][snake.head.y];
+    const start = graph.nodes[snake.head.x][snake.head.y];
 
     const targetPoints = targets
       ? targets
@@ -88,12 +88,12 @@ class Astar {
           return null;
         }
 
-        const end = graph.grid[target.x][target.y];
+        const end = graph.nodes[target.x][target.y];
         if (!end || end.isWall()) {
           return null;
         }
 
-        const path = Astar.search(graph, start, end);
+        const path = Astar.search(graph.nodes, start, end);
         return path.length ? { path, target } : null;
       })
       .filter(Boolean);
@@ -239,7 +239,7 @@ class Graph {
       this.nodes[x] = [];
 
       for (let y = 0; y < this.height; y++) {
-        this.nodes[x][y] = new GridNode(x, y, grid[x][y]);
+        this.nodes[x][y] = new GridNode(x, y, grid[y][x]);
       }
     }
   }

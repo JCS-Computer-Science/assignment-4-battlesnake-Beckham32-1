@@ -20,7 +20,7 @@ const app = express();
 app.use(express.json());
 const config = {
 	apiversion: "1",
-	author: "Preemptor",
+	author: "PreV1",
 	color: "#3479b1",
 	head: "all-seeing",
 	tail: "mystic-moon",

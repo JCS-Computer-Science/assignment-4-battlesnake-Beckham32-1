@@ -1,5 +1,5 @@
-import { collision } from "./collision.js";
 import flood from "./floodfill.js";
+import { collision } from "./collision.js";
 import { astar } from "./astar.js";
 
 export default function score(snake) {
@@ -11,7 +11,7 @@ export default function score(snake) {
   const directions = ["up", "down", "left", "right"];
   for (const dir of directions) {
     if (!snake.moves[dir]) {
-      snake.scores[dir] = -Infinity;
+      snake.scores[dir] = -Infinity; // Invalid moves get -Infinity score so they are never chosen
       continue;
     }
 
@@ -39,8 +39,21 @@ export default function score(snake) {
       x: food.x,
       y: food.y,
     }));
-    const food_path = astar.run(temp_snake, food_targets, null);
-    const food_score = food_path.length ? -food_path.length : -1000;
+    const astar_grid = Array.from({ length: snake.board.width }, () =>
+      Array.from({ length: snake.board.height }, () => 0),
+    );
+    for (const other of snake.board.snakes) {
+      for (const part of other.body) {
+        astar_grid[part.x][part.y] = 1;
+      }
+    }
+    if (snake.board.hazards) {
+      for (const hazard of snake.board.hazards) {
+        astar_grid[hazard.x][hazard.y] = 1;
+      }
+    }
+    const food_path = astar.run(temp_snake, food_targets, astar_grid);
+    const food_score = food_path.length ? -food_path.length * 2 : -2000;
 
     // Enemy score: based on attack logic
     let enemy_score = 0;
@@ -89,14 +102,19 @@ export default function score(snake) {
         const enemy_path = astar.run(
           temp_snake,
           [{ x: predicted_x, y: predicted_y }],
-          null,
+          astar_grid,
         );
-        enemy_score = enemy_path.length ? -enemy_path.length : -1000;
+        enemy_score = enemy_path.length ? -enemy_path.length * 2 : -2000;
       }
     }
 
-    // Combine scores: space is heavily weighted, food and enemy are penalties/rewards
-    snake.scores[dir] = space_score * 10 + food_score + enemy_score;
+    const hunger = (100 - snake.health) / 100.0;
+    const adjusted_food_score = food_score * (1 + hunger * 2);
+    const adjusted_enemy_score = enemy_score * (1 + hunger);
+
+    // Combine scores: space is weighted, food and enemy are penalties/rewards
+    snake.scores[dir] =
+      space_score * 5 + adjusted_food_score + adjusted_enemy_score;
   }
 
   const move_scores = Object.values(snake.scores);

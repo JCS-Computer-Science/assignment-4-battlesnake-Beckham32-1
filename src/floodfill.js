@@ -22,6 +22,7 @@ export default function flood(snake) {
   return grid;
 }
 
+// Recursive depth first search
 function dfs(grid, x, y) {
   if (
     x < 0 ||
