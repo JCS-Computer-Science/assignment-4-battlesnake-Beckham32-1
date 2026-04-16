@@ -22,8 +22,13 @@ export default function score(snake) {
     else if (dir === "left") new_head.x -= 1;
     else if (dir === "right") new_head.x += 1;
 
-    // Create temp snake with new head
-    const temp_snake = { ...snake, head: new_head };
+    // Determine whether this move would eat food and simulate the body movement
+    const willEat = snake.board.food.some(
+      (food) => food.x === new_head.x && food.y === new_head.y,
+    );
+    const tempBody = [{ ...new_head }, ...snake.body];
+    if (!willEat) tempBody.pop();
+    const temp_snake = { ...snake, head: new_head, body: tempBody };
 
     // Floodfill score: count safe squares (2)
     const grid = flood(temp_snake);
@@ -43,17 +48,26 @@ export default function score(snake) {
       Array.from({ length: snake.board.height }, () => 0),
     );
     for (const other of snake.board.snakes) {
+      if (other.id === snake.game.you.id) continue;
       for (const part of other.body) {
         astar_grid[part.x][part.y] = 1;
       }
+    }
+    for (const part of tempBody) {
+      astar_grid[part.x][part.y] = 1;
     }
     if (snake.board.hazards) {
       for (const hazard of snake.board.hazards) {
         astar_grid[hazard.x][hazard.y] = 1;
       }
     }
+
     const food_path = astar.run(temp_snake, food_targets, astar_grid);
-    const food_score = food_path.length ? -food_path.length * 2 : -2000;
+    const food_score = willEat
+      ? 1000
+      : food_path.length
+        ? -food_path.length * 2
+        : -2000;
 
     // Enemy score: based on attack logic
     let enemy_score = 0;
