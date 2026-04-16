@@ -231,15 +231,15 @@ class Graph {
     options = options || {};
     this.diagonal = !!options.diagonal;
     this.grid = grid;
-    this.height = grid.length;
-    this.width = grid[0].length;
+    this.width = grid.length;
+    this.height = grid[0].length;
     this.nodes = [];
 
     for (let x = 0; x < this.width; x++) {
       this.nodes[x] = [];
 
       for (let y = 0; y < this.height; y++) {
-        this.nodes[x][y] = new GridNode(x, y, grid[y][x]);
+        this.nodes[x][y] = new GridNode(x, y, grid[x][y]);
       }
     }
   }

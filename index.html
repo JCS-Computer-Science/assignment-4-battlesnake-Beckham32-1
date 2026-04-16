@@ -95,13 +95,27 @@
         background: #47c6ff;
         cursor: pointer;
       }
+      .board-wrapper {
+        position: relative;
+        display: inline-block;
+        background: #14172b;
+        border-radius: 14px;
+        padding: 12px;
+      }
       .board {
         display: grid;
         gap: 4px;
         justify-content: center;
-        border-radius: 14px;
-        background: #14172b;
-        padding: 12px;
+        background: transparent;
+        padding: 0;
+      }
+      #debugCanvas {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        pointer-events: none;
+        z-index: 10;
+        background: transparent;
       }
       .cell {
         width: 38px;
@@ -205,17 +219,10 @@
             class="panel"
             style="padding: 0; background: none; border: none; box-shadow: none"
           >
-            <div id="board" class="board"></div>
-            <canvas
-              id="debugCanvas"
-              style="
-                position: relative;
-                top: 0;
-                left: 0;
-                pointer-events: none;
-                z-index: 10;
-              "
-            ></canvas>
+            <div class="board-wrapper">
+              <div id="board" class="board"></div>
+              <canvas id="debugCanvas"></canvas>
+            </div>
           </div>
           <div class="footer">
             Debug page available from <code>/debug</code> when the Battlesnake
@@ -690,8 +697,8 @@ Press Render Board to calculate safe moves.</pre
           ctx.beginPath();
           for (let i = 0; i < path.length; i++) {
             const p = path[i];
-            const cx = 12 + p.x * (cellSize + gap) + cellSize / 2;
-            const cy = 12 + (height - 1 - p.y) * (cellSize + gap) + cellSize / 2;
+            const cx = p.x * (cellSize + gap) + cellSize / 2;
+            const cy = (height - 1 - p.y) * (cellSize + gap) + cellSize / 2;
             if (i === 0) ctx.moveTo(cx, cy);
             else ctx.lineTo(cx, cy);
           }
