@@ -23,20 +23,21 @@ export default function score(snake) {
     else if (dir === "right") new_head.x += 1;
 
     // Determine whether this move would eat food and simulate the body movement
-    const willEat = snake.board.food.some(
+    const will_eat = snake.board.food.some(
       (food) => food.x === new_head.x && food.y === new_head.y,
     );
-    const tempBody = [{ ...new_head }, ...snake.body];
-    if (!willEat) tempBody.pop();
+    const temp_body = [{ ...new_head }, ...snake.body];
+    if (!will_eat) temp_body.pop();
 
+    // Block out moves into hazards or snake parts
     const blocked = new Set();
     for (const other of snake.board.snakes) {
       for (const [index, part] of other.body.entries()) {
-        const isOwnTail =
+        const is_own_tail =
           other.id === snake.game.you.id &&
           index === other.body.length - 1 &&
-          !willEat;
-        if (!isOwnTail) {
+          !will_eat;
+        if (!is_own_tail) {
           blocked.add(`${part.x},${part.y}`);
         }
       }
@@ -48,17 +49,14 @@ export default function score(snake) {
     }
 
     if (
-      new_head.x < 0 ||
-      new_head.x >= snake.board.width ||
-      new_head.y < 0 ||
-      new_head.y >= snake.board.height ||
+      collision.general(snake, new_head) ||
       blocked.has(`${new_head.x},${new_head.y}`)
     ) {
-      snake.scores[dir] = -Infinity;
+      snake.scores[dir] = -Infinity; // Direction will collide with bounds or blocked cell
       continue;
     }
 
-    const temp_snake = { ...snake, head: new_head, body: tempBody };
+    const temp_snake = { ...snake, head: new_head, body: temp_body };
 
     // Floodfill score: count safe squares (2)
     const grid = flood(temp_snake);
@@ -69,23 +67,23 @@ export default function score(snake) {
       }
     }
 
-    const totalCells = snake.board.width * snake.board.height;
+    const total_cells = snake.board.width * snake.board.height;
 
     // Calculate how many cells are actually free (not occupied by snakes/hazards)
-    let occupiedCells = 0;
+    let occupied_cells = 0;
     for (const other of snake.board.snakes) {
-      occupiedCells += other.body.length;
+      occupied_cells += other.body.length;
     }
     if (snake.board.hazards) {
-      occupiedCells += snake.board.hazards.length;
+      occupied_cells += snake.board.hazards.length;
     }
-    const freeCells = totalCells - occupiedCells;
+    const free_cells = total_cells - occupied_cells;
 
-    const starving = snake.health < 50;
-    const safeThreshold = starving ? 0.2 : 0.8;
-    // Require access to 80% of the available free cells, not total board
-    if (space_score < freeCells * safeThreshold) {
-      snake.scores[dir] = -Infinity;
+    const starving = snake.health < 50; // Starving Mode: if snake health drops below the threshold (50) it will ignore most other rules and go straight for food
+    const safe_threshold = starving ? 0.2 : 0.8; // Threshold for how much of the board the snake must be able to access at all times (80%), when starving (20%)
+
+    if (space_score < free_cells * safe_threshold) {
+      snake.scores[dir] = -Infinity; // Direction score is killed as it fails the 80% guard
       continue;
     }
 
@@ -103,7 +101,7 @@ export default function score(snake) {
         astar_grid[part.x][part.y] = 1;
       }
     }
-    for (const part of tempBody) {
+    for (const part of temp_body) {
       astar_grid[part.x][part.y] = 1;
     }
     if (snake.board.hazards) {
@@ -112,34 +110,33 @@ export default function score(snake) {
       }
     }
 
-    const longMode = !starving && astar.isLongMode(snake);
+    const long_mode = !starving && astar.isLongMode(snake); // Long mode: if snake exceeds 25 segments it is considered long and now takes the longest instead of the shortest astar path
     const food_path = astar.run(temp_snake, food_targets, astar_grid, {
-      safeThreshold,
-      longMode,
-      survival: true,
+      safe_threshold,
+      long_mode,
+      survival: false,
     });
 
     // Check if this move is on the food path
-    const isOnFoodPath =
+    const is_on_food_path =
       food_path.length > 0 &&
       food_path[0].x === new_head.x &&
       food_path[0].y === new_head.y;
 
     let food_score;
-    if (willEat) {
-      food_score = 1000;
+    if (will_eat) {
+      food_score = 1000; // Strong bonus for eating food
     } else if (food_path.length) {
       if (starving) {
-        food_score = -food_path.length * 4;
+        food_score = -food_path.length * 4; // When starving, heavily penalize longer paths to food
       } else {
-        food_score = longMode ? -food_path.length * 2 : food_path.length * 2;
+        food_score = long_mode ? -food_path.length * 2 : food_path.length * 2; // Normal mode: prefer shorter paths, Long mode: prefer longer paths to extend survival time
       }
-      // Strong bonus for being on the direct path to food
-      if (isOnFoodPath) {
-        food_score += 300;
+      if (is_on_food_path) {
+        food_score += 300; // Strong bonus for being on the direct path to food
       }
     } else {
-      food_score = starving ? -2000 : 0;
+      food_score = starving ? -2000 : 0; // If starving and no path to food, heavy penalty. Otherwise, no food score if no path exists
     }
 
     // Enemy score: based on attack logic
@@ -200,22 +197,22 @@ export default function score(snake) {
     const adjusted_enemy_score = enemy_score * (1 + hunger);
 
     // Edge penalty: discourage positions near board boundaries
-    const distToLeft = new_head.x;
-    const distToRight = snake.board.width - 1 - new_head.x;
-    const distToBottom = new_head.y;
-    const distToTop = snake.board.height - 1 - new_head.y;
-    const minDistToEdge = Math.min(
-      distToLeft,
-      distToRight,
-      distToBottom,
-      distToTop,
+    const dist_to_left = new_head.x;
+    const dist_to_right = snake.board.width - 1 - new_head.x;
+    const dist_to_bottom = new_head.y;
+    const dist_to_top = snake.board.height - 1 - new_head.y;
+    const min_dist_to_edge = Math.min(
+      dist_to_left,
+      dist_to_right,
+      dist_to_bottom,
+      dist_to_top,
     );
-    const edge_penalty = Math.max(0, 700 - minDistToEdge * 140);
+    const edge_penalty = Math.max(0, 700 - min_dist_to_edge * 140);
 
     // When starving, ONLY prioritize food - ignore space and enemy concerns
     if (starving) {
       snake.scores[dir] = adjusted_food_score;
-      if (isOnFoodPath) {
+      if (is_on_food_path) {
         snake.scores[dir] += 500; // Extra bonus for being on the direct path when starving
       }
     } else {
@@ -249,10 +246,10 @@ export default function score(snake) {
     }
   }
 
-  // Last resort: if somehow no valid moves existed (shouldn't happen with collision checks)
-  if (!best_move) {
-    best_move = "up";
+  // If all but 1 move is false, that is the only move
+  if (Object.values(snake.moves).filter((v) => v).length === 1) {
+    best_move = snake.moves[best_move] ? best_move : null;
   }
 
-  return best_move;
+  return !best_move ? "up" : best_move; // Last resort: if somehow no valid moves existed return up
 }

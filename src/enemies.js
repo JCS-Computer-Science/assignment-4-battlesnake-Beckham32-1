@@ -1,18 +1,18 @@
-/**
- * Simple enemy AI behaviors for testing
- =====================================
- */
+// =====================================
+// Simple enemy AI behaviors for testing
+// =====================================
 
-/**
- * Chaser: Pursues the largest snake on the board
- */
+import { collision } from "./collision.js";
+
+// Chaser snake: pursue and try to box the largest snake
+// *****************************************************
 export function chaser(snake, gameState) {
   // Find the largest snake (target to chase)
   let target = null;
-  let maxLength = 0;
+  let max_length = 0;
   for (const other of gameState.board.snakes) {
-    if (other.id !== snake.id && other.body.length > maxLength) {
-      maxLength = other.body.length;
+    if (other.id !== snake.id && other.body.length > max_length) {
+      max_length = other.body.length;
       target = other.head;
     }
   }
@@ -20,28 +20,25 @@ export function chaser(snake, gameState) {
   return getSmartMove(snake, gameState, target);
 }
 
-/**
- * FoodFinder: Moves towards the nearest food
- */
+// Food Finder: Finds and eats the nearest food
+// ********************************************
 export function foodFinder(snake, gameState) {
   // Find nearest food
-  let nearestFood = null;
-  let minDist = Infinity;
+  let nearest_food = null;
+  let min_dist = Infinity;
   for (const food of gameState.board.food) {
     const dist =
       Math.abs(food.x - snake.head.x) + Math.abs(food.y - snake.head.y);
-    if (dist < minDist) {
-      minDist = dist;
-      nearestFood = food;
+    if (dist < min_dist) {
+      min_dist = dist;
+      nearest_food = food;
     }
   }
 
-  return getSmartMove(snake, gameState, nearestFood);
+  return getSmartMove(snake, gameState, nearest_food);
 }
 
-/**
- * Get a smart move towards a target, avoiding obstacles
- */
+// Returns a move based on a target that will not kill the snake (bounds and simple snake collision)
 function getSmartMove(snake, gameState, target) {
   const head = snake.head;
   const width = gameState.board.width;
@@ -67,39 +64,35 @@ function getSmartMove(snake, gameState, target) {
     { direction: "left", dx: -1, dy: 0 },
     { direction: "right", dx: 1, dy: 0 },
   ].filter((move) => {
-    const newX = head.x + move.dx;
-    const newY = head.y + move.dy;
+    const new_x = head.x + move.dx;
+    const new_y = head.y + move.dy;
     return (
-      newX >= 0 &&
-      newX < width &&
-      newY >= 0 &&
-      newY < height &&
-      !blocked.has(`${newX},${newY}`)
+      collision.general(new_x, new_y, -1, -1) && // Check bounds
+      collision.general(new_x, new_y, width, height) &&
+      collision.general(new_x, new_y, head.x, head.y) && // Check not colliding with self
+      collision.general(new_x, new_y, head.x + move.dx, head.y + move.dy) && // Check not colliding with body
+      !blocked.has(`${new_x},${new_y}`)
     );
   });
 
-  // If no valid moves, pick any valid direction (shouldn't happen in test)
-  if (moves.length === 0) {
-    return "up";
-  }
+  // If no valid moves, pick any valid direction (shouldn't happen in testing)
+  if (moves.length === 0) return "up";
 
   // If no target, just pick a random valid move
-  if (!target) {
-    return moves[Math.floor(Math.random() * moves.length)].direction;
-  }
+  if (!target) return moves[Math.floor(Math.random() * moves.length)].direction;
 
   // Pick the move that gets closest to the target
-  let bestMove = moves[0];
-  let bestDist = Infinity;
+  let best_move = moves[0];
+  let best_dist = Infinity;
   for (const move of moves) {
     const newX = head.x + move.dx;
     const newY = head.y + move.dy;
     const dist = Math.abs(newX - target.x) + Math.abs(newY - target.y);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestMove = move;
+    if (dist < best_dist) {
+      best_dist = dist;
+      best_move = move;
     }
   }
 
-  return bestMove.direction;
+  return best_move.direction;
 }

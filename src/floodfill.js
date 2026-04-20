@@ -24,7 +24,7 @@ export default function flood(snake) {
     }
   }
 
-  // Perform flood fill from head to mark reachable empty squares as safe (2)
+  // Perform flood fill from head to mark *reachable* empty squares as safe (2)
   dfs(grid, snake.head.x, snake.head.y);
   return grid;
 }

@@ -2,7 +2,6 @@ import flood from "./floodfill.js";
 import { astar } from "./astar.js";
 
 export default function debug(snake) {
-  // Compute debug info
   const width = snake.board.width;
   const height = snake.board.height;
   const grid = Array.from({ length: width }, () =>
@@ -15,12 +14,14 @@ export default function debug(snake) {
       grid[part.x][part.y] = 1;
     }
   }
+  // Guard in case gamemode has no hazards
   if (snake.board.hazards) {
     for (const hazard of snake.board.hazards) {
       grid[hazard.x][hazard.y] = 1;
     }
   }
 
+  // Any cells the snake has no access to (will kill it)
   const blocked = [];
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
@@ -46,14 +47,8 @@ export default function debug(snake) {
     }
   }
 
-  let path = [];
-  if (target) {
-    path = astar.run(snake, [target], grid, {
-      safeThreshold: 0.8,
-      survival: false,
-    });
-  }
-
+  // Copied from score.js and modified for the debug testing
+  // ? move to new file to extend from each script
   const score_grid = Array.from({ length: width }, () =>
     Array.from({ length: height }, () => 0),
   );
@@ -61,112 +56,119 @@ export default function debug(snake) {
     for (let y = 0; y < height; y++) {
       if (grid[x][y] === 1) continue;
 
-      const testHead = { x, y };
-      const testBody = [testHead, ...snake.body];
-      if (testBody.length > 1) testBody.pop();
-      const testSnake = { ...snake, head: testHead, body: testBody };
+      const test_head = { x, y };
+      const test_body = [test_head, ...snake.body];
+      if (test_body.length > 1) test_body.pop();
+      const test_snake = { ...snake, head: test_head, body: test_body };
 
-      const testGrid = flood(testSnake);
-      let testSpaceScore = 0;
-      for (let tx = 0; tx < testGrid.length; tx++) {
-        for (let ty = 0; ty < testGrid[0].length; ty++) {
-          if (testGrid[tx][ty] === 2) testSpaceScore++;
+      const test_grid = flood(test_snake);
+      let test_space_score = 0;
+      for (let tx = 0; tx < test_grid.length; tx++) {
+        for (let ty = 0; ty < test_grid[0].length; ty++) {
+          if (test_grid[tx][ty] === 2) test_space_score++;
         }
       }
 
-      const willEat = food_targets.some((food) => food.x === x && food.y === y);
-      const testTempBody = [{ x, y }, ...snake.body];
-      if (!willEat) testTempBody.pop();
+      const will_eat = food_targets.some(
+        (food) => food.x === x && food.y === y,
+      );
+      const test_temp_body = [{ x, y }, ...snake.body];
+      if (!will_eat) test_temp_body.pop();
 
-      const testAstarGrid = Array.from({ length: width }, () =>
+      const test_astar_grid = Array.from({ length: width }, () =>
         Array.from({ length: height }, () => 0),
       );
       for (const other of snake.board.snakes) {
         if (other.id === snake.game.you.id) continue;
         for (const part of other.body) {
-          testAstarGrid[part.x][part.y] = 1;
+          test_astar_grid[part.x][part.y] = 1;
         }
       }
-      for (const part of testTempBody) {
-        testAstarGrid[part.x][part.y] = 1;
+      for (const part of test_temp_body) {
+        test_astar_grid[part.x][part.y] = 1;
       }
       if (snake.board.hazards) {
         for (const hazard of snake.board.hazards) {
-          testAstarGrid[hazard.x][hazard.y] = 1;
+          test_astar_grid[hazard.x][hazard.y] = 1;
         }
       }
 
-      const testFoodPath = astar.run(testSnake, food_targets, testAstarGrid, {
-        safeThreshold: 0.8,
-        longMode: astar.isLongMode(snake),
-        survival: true,
-      });
+      const test_food_path = astar.run(
+        test_snake,
+        food_targets,
+        test_astar_grid,
+        {
+          safe_threshold: 0.8,
+          long_mode: astar.isLongMode(snake),
+          survival: true,
+        },
+      );
 
-      let testFoodScore = 0;
-      if (willEat) {
-        testFoodScore = 1000;
-      } else if (testFoodPath.length) {
-        testFoodScore = -testFoodPath.length * 2;
+      let test_food_score = 0;
+      if (will_eat) {
+        test_food_score = 1000;
+      } else if (test_food_path.length) {
+        test_food_score = -test_food_path.length * 2;
       }
 
-      const distToLeft = x;
-      const distToRight = width - 1 - x;
-      const distToBottom = y;
-      const distToTop = height - 1 - y;
-      const minDistToEdge = Math.min(
-        distToLeft,
-        distToRight,
-        distToBottom,
-        distToTop,
+      const dist_to_left = x;
+      const dist_to_right = width - 1 - x;
+      const dist_to_bottom = y;
+      const dist_to_top = height - 1 - y;
+      const min_dist_to_edge = Math.min(
+        dist_to_left,
+        dist_to_right,
+        dist_to_bottom,
+        dist_to_top,
       );
-      const edgePenalty = Math.max(0, 700 - minDistToEdge * 140);
+      const edge_penalty = Math.max(0, 700 - min_dist_to_edge * 140);
 
-      score_grid[x][y] = testSpaceScore * 5 + testFoodScore - edgePenalty;
+      score_grid[x][y] = test_space_score * 5 + test_food_score - edge_penalty;
     }
   }
 
-  const safeFoodPath = astar.run(snake, food_targets, grid, {
-    safeThreshold: 0.8,
+  const safe_food_path = astar.run(snake, food_targets, grid, {
+    safe_threshold: 0.8,
     survival: false,
   });
-  const effectivePath = astar.run(snake, food_targets, grid, {
-    safeThreshold: 0.8,
+  const effective_path = astar.run(snake, food_targets, grid, {
+    safe_threshold: 0.8,
     survival: true,
   });
-  const pathType = safeFoodPath.length ? "safe-food" : "survival";
-  if (pathType === "survival" && effectivePath.length) {
-    target = effectivePath[effectivePath.length - 1];
+  const path_type = safe_food_path.length ? "safe-food" : "survival";
+  if (path_type === "survival" && effective_path.length) {
+    target = effective_path[effective_path.length - 1];
   }
 
-  let reachableCells = 0;
-  let safeRatio = 0;
-  if (effectivePath.length) {
-    const end = effectivePath[effectivePath.length - 1];
-    const willEat = food_targets.some(
+  let reachable_cells = 0;
+  let safe_ratio = 0;
+  if (effective_path.length) {
+    const end = effective_path[effective_path.length - 1];
+    const will_eat = food_targets.some(
       (food) => food.x === end.x && food.y === end.y,
     );
     const projected = astar.simulateProjectedGrid(
       snake,
-      effectivePath,
+      effective_path,
       grid,
-      willEat,
+      will_eat,
     );
     if (astar.inBounds(projected, end.x, end.y)) {
       projected[end.x][end.y] = 0;
     }
-    reachableCells = astar.countReachableCells(projected, end.x, end.y);
-    safeRatio = width * height > 0 ? reachableCells / (width * height) : 0;
+    reachable_cells = astar.countReachableCells(projected, end.x, end.y);
+    safe_ratio = width * height > 0 ? reachable_cells / (width * height) : 0;
   }
 
   return {
     blocked,
     target,
     scores: score_grid,
-    path: effectivePath,
-    pathType,
-    longMode: astar.isLongMode(snake),
-    reachableCells,
-    totalCells: width * height,
-    safeRatio,
+    path: effective_path,
+    path_type,
+    long_mode: astar.isLongMode(snake),
+    reachable_cells,
+    total_cells: width * height,
+    safe_ratio,
   };
 }

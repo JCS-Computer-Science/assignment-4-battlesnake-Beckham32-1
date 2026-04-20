@@ -44,4 +44,8 @@ export const collision = {
       }
     }
   },
+  general(x1, y1, x2, y2) {
+    // AABB general collision for alternative usages
+    if (x1 < x2 + 1 && x1 + 1 > x2 && y1 < y2 + 1 && y1 + 1 > y2) return true;
+  },
 };
