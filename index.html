@@ -46,7 +46,7 @@
       }
       .content {
         display: grid;
-        grid-template-columns: 4fr 7fr;
+        grid-template-columns: 3fr 4fr;
         gap: 1rem;
       }
       .panel {
@@ -91,6 +91,7 @@
         background: #2b3364;
         height: 8px;
         border-radius: 5px;
+        width: 150px;
         outline: none;
       }
       input[type="range"]::-webkit-slider-thumb {
@@ -107,8 +108,9 @@
         display: inline-block;
         background: #14172b;
         border-radius: 14px;
-        padding: 12px;
+        padding: 24px 12px;
         margin-bottom: 1.5rem;
+        width: 95%;
       }
       .board {
         display: grid;
@@ -119,8 +121,8 @@
       }
       #debugCanvas {
         position: absolute;
-        top: 12px;
-        left: 12px;
+        top: calc(5% - 1px);
+        left: 10%;
         pointer-events: none;
         z-index: 10;
         background: transparent;
@@ -189,9 +191,6 @@
         padding: 1rem;
         color: #8c97bf;
       }
-      canvas {
-        background: rgba(255, 0, 255, 0.5);
-      }
     </style>
   </head>
   <body>
@@ -255,17 +254,27 @@ Press Render Board to calculate safe moves.</pre
               <pre id="moveResponse">No request sent yet.</pre>
             </div>
             <div class="footer">
-              Debug page available from <code style="background-color: #12162b; border-radius: 5px; padding: 5px;">/debug</code> endpoint when the Battlesnake
-              server is running.
+              Debug page available from
+              <code
+                style="
+                  background-color: #12162b;
+                  border-radius: 5px;
+                  padding: 5px;
+                "
+                >/debug</code
+              >
+              endpoint when the Battlesnake server is running.
             </div>
           </div>
         </section>
       </div>
     </main>
-    <script>
+    <script type="module">
+      import { chaser, foodFinder } from "./src/enemies.js";
+
       const sampleState = {
         game: { id: "sample-game-123" },
-        turn: 7,
+        turn: 1,
         board: {
           height: 11,
           width: 11,
@@ -273,8 +282,8 @@ Press Render Board to calculate safe moves.</pre
           snakes: [
             {
               id: "you",
-              name: "PreV1",
-              health: 91,
+              name: "PreV2",
+              health: 100,
               body: [
                 { x: 5, y: 5 },
                 { x: 5, y: 4 },
@@ -286,8 +295,9 @@ Press Render Board to calculate safe moves.</pre
             },
             {
               id: "enemy-1",
-              name: "Chaser",
-              health: 42,
+              name: "Foodmuncher",
+              type: "foodFinder",
+              health: 100,
               body: [
                 { x: 8, y: 8 },
                 { x: 8, y: 7 },
@@ -296,14 +306,29 @@ Press Render Board to calculate safe moves.</pre
               ],
               head: { x: 8, y: 8 },
               length: 4,
-              shout: "Keep away!",
+              shout: "I love food!",
+            },
+            {
+              id: "enemy-2",
+              name: "Followsnake",
+              type: "chaser",
+              health: 100,
+              body: [
+                { x: 2, y: 2 },
+                { x: 2, y: 1 },
+                { x: 1, y: 1 },
+                { x: 1, y: 2 },
+              ],
+              head: { x: 2, y: 2 },
+              length: 4,
+              shout: "I'm following you!",
             },
           ],
         },
         you: {
           id: "you",
-          name: "PreV1",
-          health: 91,
+          name: "PreV2",
+          health: 100,
           body: [
             { x: 5, y: 5 },
             { x: 5, y: 4 },
@@ -440,7 +465,7 @@ Press Render Board to calculate safe moves.</pre
                 : type === "hazard"
                   ? "Death"
                   : type === "you-head"
-                    ? "PreV1"
+                    ? "PreV2"
                     : type === "enemy-head"
                       ? "Enemy"
                       : type === "you-body" || type === "enemy-body"
@@ -462,12 +487,15 @@ Press Render Board to calculate safe moves.</pre
                 <div class="item"><strong>Turn</strong><span>${sampleState.turn}</span></div>
                 <div class="item"><strong>Board</strong><span>${width} × ${height}</span></div>
                 <div class="item"><strong>${sampleState.you.name} Health</strong><span>${sampleState.you.health}</span></div>
-                <div class="item"><strong>Food</strong><span>${sampleState.board.food.length}</span></div>
-                <div class="item"><strong>Snakes</strong><span>${sampleState.board.snakes.length}</span></div>
-                <div class="item"><strong>Safe Moves</strong><span>${Object.values(safeMoves).filter(Boolean).length}</span></div>
             `;
 
-        moveAnalysis.textContent = safeStrings;
+        moveAnalysis.textContent =
+          `${safeStrings}\n\n` +
+          (debugData
+            ? `Path: ${debugData.pathType} (${debugData.path.length} steps)\nSafe ratio: ${(
+                debugData.safeRatio * 100
+              ).toFixed(1)}%`
+            : "No debug data available.");
 
         if (showDebug) renderDebug();
       }
@@ -504,13 +532,18 @@ Press Render Board to calculate safe moves.</pre
         right: { x: 1, y: 0 },
       };
 
-      function applyMove(move) {
+      function applySnakeMove(snakeId, move) {
         const vector = directionVectors[move];
         if (!vector) {
           throw new Error(`Invalid move received: ${move}`);
         }
 
-        const head = sampleState.you.head;
+        const snake = sampleState.board.snakes.find((s) => s.id === snakeId);
+        if (!snake) {
+          throw new Error(`Snake not found: ${snakeId}`);
+        }
+
+        const head = snake.head;
         const newHead = {
           x: head.x + vector.x,
           y: head.y + vector.y,
@@ -524,7 +557,7 @@ Press Render Board to calculate safe moves.</pre
           newHead.y < 0 ||
           newHead.y >= height
         ) {
-          throw new Error("Move would leave the board.");
+          throw new Error(`Snake ${snakeId} moved outside board.`);
         }
 
         const foodIndex = sampleState.board.food.findIndex(
@@ -533,12 +566,10 @@ Press Render Board to calculate safe moves.</pre
         const ateFood = foodIndex !== -1;
 
         const blocked = new Set();
-        sampleState.board.snakes.forEach((snake) => {
-          snake.body.forEach((segment, index) => {
+        sampleState.board.snakes.forEach((s) => {
+          s.body.forEach((segment, index) => {
             const isOwnTail =
-              snake.id === sampleState.you.id &&
-              index === snake.body.length - 1 &&
-              !ateFood;
+              s.id === snakeId && index === s.body.length - 1 && !ateFood;
             if (!isOwnTail) {
               blocked.add(getCellKey(segment.x, segment.y));
             }
@@ -551,37 +582,117 @@ Press Render Board to calculate safe moves.</pre
         }
 
         if (blocked.has(getCellKey(newHead.x, newHead.y))) {
-          throw new Error("Move would collide with a body or hazard.");
+          throw new Error(`Snake ${snakeId} collided with obstacle.`);
         }
 
-        const newBody = [{ ...newHead }, ...sampleState.you.body];
+        const newBody = [{ ...newHead }, ...snake.body];
         if (!ateFood) {
           newBody.pop();
         } else {
           sampleState.board.food.splice(foodIndex, 1);
+          let spawnX, spawnY;
+          let occupied;
+          do {
+            spawnX = Math.floor(Math.random() * width);
+            spawnY = Math.floor(Math.random() * height);
+            occupied =
+              sampleState.board.snakes.some((s) =>
+                s.body.some((part) => part.x === spawnX && part.y === spawnY),
+              ) ||
+              sampleState.board.food.some(
+                (food) => food.x === spawnX && food.y === spawnY,
+              );
+          } while (occupied);
+          sampleState.board.food.push({ x: spawnX, y: spawnY });
         }
 
-        sampleState.you.body = newBody;
-        sampleState.you.head = { ...newHead };
-        sampleState.you.length = newBody.length;
-        sampleState.turn += 1;
-        sampleState.you.health = ateFood
-          ? Math.min(100, sampleState.you.health + 20)
-          : sampleState.you.health - 1;
+        snake.body = newBody;
+        snake.head = { ...newHead };
+        snake.length = newBody.length;
+        snake.health = ateFood
+          ? Math.min(100, snake.health + 20)
+          : snake.health - 1;
+      }
 
-        if (sampleState.you.health <= 0) {
-          throw new Error("Your snake has starved.");
+      function applyMove(move) {
+        applySnakeMove("you", move);
+      }
+
+      function applyEnemyMoves() {
+        for (const enemy of sampleState.board.snakes) {
+          if (enemy.id === "you") continue;
+          if (enemy.health <= 0) continue; // Skip dead enemies
+
+          try {
+            let move;
+            if (enemy.type === "chaser") {
+              move = chaser(enemy, sampleState);
+            } else if (enemy.type === "foodFinder") {
+              move = foodFinder(enemy, sampleState);
+            } else {
+              move = "up"; // Default fallback
+            }
+
+            applySnakeMove(enemy.id, move);
+          } catch (error) {
+            console.log(`Enemy ${enemy.id} died: ${error.message}`);
+            killSnake(enemy.id);
+          }
+        }
+      }
+
+      function killSnake(snakeId) {
+        const snake = sampleState.board.snakes.find((s) => s.id === snakeId);
+        if (snake) {
+          snake.health = 0;
+        }
+      }
+
+      function processDeaths() {
+        // Kill snakes with starvation
+        for (const snake of sampleState.board.snakes) {
+          if (snake.health <= 0) {
+            killSnake(snake.id);
+          }
         }
 
-        const youOnBoard = sampleState.board.snakes.find(
-          (snake) => snake.id === sampleState.you.id,
+        // Check for head-to-head collisions
+        for (let i = 0; i < sampleState.board.snakes.length; i++) {
+          for (let j = i + 1; j < sampleState.board.snakes.length; j++) {
+            const snake1 = sampleState.board.snakes[i];
+            const snake2 = sampleState.board.snakes[j];
+
+            if (
+              snake1.health > 0 &&
+              snake2.health > 0 &&
+              snake1.head.x === snake2.head.x &&
+              snake1.head.y === snake2.head.y
+            ) {
+              // Head-on collision
+              if (snake1.length > snake2.length) {
+                killSnake(snake2.id);
+              } else if (snake2.length > snake1.length) {
+                killSnake(snake1.id);
+              } else {
+                // Equal length - both die
+                killSnake(snake1.id);
+                killSnake(snake2.id);
+              }
+            }
+          }
+        }
+
+        // Remove dead snakes from the board
+        sampleState.board.snakes = sampleState.board.snakes.filter(
+          (snake) => snake.health > 0,
         );
-        if (youOnBoard) {
-          youOnBoard.body = newBody;
-          youOnBoard.head = { ...newHead };
-          youOnBoard.health = sampleState.you.health;
-          youOnBoard.length = newBody.length;
+
+        // Check if player is dead
+        if (!sampleState.board.snakes.find((s) => s.id === "you")) {
+          return "Your snake died!";
         }
+
+        return null;
       }
 
       async function advanceTurn() {
@@ -594,7 +705,25 @@ Press Render Board to calculate safe moves.</pre
           if (!move) {
             throw new Error("Backend response did not include a move.");
           }
-          applyMove(move);
+
+          try {
+            applyMove(move);
+          } catch (error) {
+            // Player hit wall, themselves, or enemy
+            console.log(`Player collision: ${error.message}`);
+            killSnake("you");
+          }
+
+          // Apply moves for all enemy snakes
+          applyEnemyMoves();
+
+          // Process all deaths (starvation, collision, head-on collision)
+          const deathMessage = processDeaths();
+          if (deathMessage) {
+            throw new Error(deathMessage);
+          }
+
+          sampleState.turn += 1;
           renderBoard();
         } catch (error) {
           moveResponse.textContent = `Game loop stopped: ${error.message}`;
@@ -616,6 +745,7 @@ Press Render Board to calculate safe moves.</pre
         const { blocked, target, scores, path } = debugData;
         const width = sampleState.board.width;
         const height = sampleState.board.height;
+
         // Set canvas size
         const cellSize = 38;
         const gap = 4;
@@ -625,84 +755,130 @@ Press Render Board to calculate safe moves.</pre
         canvas.height = boardHeight;
         canvas.style.width = boardWidth + "px";
         canvas.style.height = boardHeight + "px";
-        // Find min max scores
-        let minScore = Infinity,
-          maxScore = -Infinity;
+
+        // Build a set of cells categorized by accessibility
+        const blockedCells = new Set(blocked.map((b) => `${b.x},${b.y}`));
+        const redCells = new Set(); // actual edge tiles and cells next to snake bodies
+        const orangeCells = new Set(); // cells adjacent to red
+        const pathCells = new Set(path.map((p) => `${p.x},${p.y}`));
+        const foodCells = new Set(
+          sampleState.board.food.map((f) => `${f.x},${f.y}`),
+        );
+
+        // Mark actual edge tiles as red (distance 0 from boundary)
         for (let x = 0; x < width; x++) {
           for (let y = 0; y < height; y++) {
-            const s = scores[x][y];
-            if (s !== 0 && s > -Infinity) {
-              if (s < minScore) minScore = s;
-              if (s > maxScore) maxScore = s;
+            const cellKey = `${x},${y}`;
+            if (blockedCells.has(cellKey)) continue; // skip blocked cells
+
+            const distToLeft = x;
+            const distToRight = width - 1 - x;
+            const distToBottom = y;
+            const distToTop = height - 1 - y;
+            const minDistToEdge = Math.min(
+              distToLeft,
+              distToRight,
+              distToBottom,
+              distToTop,
+            );
+
+            // Mark as red only if at the actual edge (distance 0)
+            if (minDistToEdge === 0) {
+              redCells.add(cellKey);
             }
           }
         }
-        // For each cell
+
+        // Also mark cells next to snake bodies as red (these are blocked anyway)
+        for (const other of sampleState.board.snakes) {
+          for (const part of other.body) {
+            redCells.add(`${part.x},${part.y}`);
+          }
+        }
+
+        // Mark cells adjacent to red cells as orange (only if not blocked or red)
+        for (const cellKey of redCells) {
+          const [x, y] = cellKey.split(",").map(Number);
+          const adjacent = [
+            [x - 1, y],
+            [x + 1, y],
+            [x, y - 1],
+            [x, y + 1],
+          ];
+          for (const [ax, ay] of adjacent) {
+            if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
+              const adjKey = `${ax},${ay}`;
+              if (!blockedCells.has(adjKey) && !redCells.has(adjKey)) {
+                orangeCells.add(adjKey);
+              }
+            }
+          }
+        }
+
+        // Render cells with new color scheme
         for (let y = height - 1; y >= 0; y--) {
           for (let x = 0; x < width; x++) {
             const cellIndex = (height - 1 - y) * width + x;
             const cell = boardElement.children[cellIndex];
-            // Blocked
-            if (blocked.some((b) => b.x === x && b.y === y)) {
-              const overlay = document.createElement("div");
-              overlay.className = "debug-overlay";
-              overlay.style.position = "absolute";
-              overlay.style.top = "5%";
-              overlay.style.left = "5%";
-              overlay.style.width = "90%";
-              overlay.style.height = "90%";
-              overlay.style.background = "black";
-              overlay.style.borderRadius = "10px";
-              cell.appendChild(overlay);
+            const cellKey = `${x},${y}`;
+
+            // Determine color - priority order matters!
+            let color = "#FFD700"; // yellow (default safe)
+
+            if (blockedCells.has(cellKey)) {
+              color = "#1A1A1A"; // black (instant death)
+            } else if (foodCells.has(cellKey)) {
+              color = "#1BB997"; // teal green (food)
+            } else if (pathCells.has(cellKey) && !foodCells.has(cellKey)) {
+              color = "#47CF47"; // light green (path)
+            } else if (redCells.has(cellKey)) {
+              color = "#BE1010"; // dark red (edges/snake bodies)
+            } else if (orangeCells.has(cellKey)) {
+              color = "#FF8C00"; // orange (adjacent to red)
             }
-            // Target
-            if (target && target.x === x && target.y === y) {
-              const overlay = document.createElement("div");
-              overlay.className = "debug-overlay";
-              overlay.style.position = "absolute";
-              overlay.style.top = "50%";
-              overlay.style.left = "50%";
-              overlay.style.transform = "translate(-50%, -50%)";
-              overlay.style.color = "red";
-              overlay.style.fontSize = "24px";
-              overlay.style.fontWeight = "bold";
-              overlay.style.textShadow = "0 0 2px black";
-              overlay.textContent = "X";
-              cell.appendChild(overlay);
-            }
-            // Scores
-            const s = scores[x][y];
+
+            // Create overlay
             if (
-              s !== 0 &&
-              s > -Infinity &&
               !(x === sampleState.you.head.x && y === sampleState.you.head.y)
             ) {
-              const ratio =
-                maxScore > minScore
-                  ? (s - minScore) / (maxScore - minScore)
-                  : 0;
-              const hue = (1 - ratio) * 120; // 120 green, 0 red
-              const color = `hsl(${hue}, 100%, 50%)`;
               const overlay = document.createElement("div");
               overlay.className = "debug-overlay";
               overlay.style.position = "absolute";
               overlay.style.top = "0";
               overlay.style.left = "0";
-              overlay.style.background = color;
-              overlay.style.fontSize = "12px";
               overlay.style.width = "100%";
               overlay.style.height = "100%";
-              overlay.style.textShadow = "0 0 2px black";
+              overlay.style.background = color;
               overlay.style.borderRadius = "4px";
-              overlay.textContent = s.toFixed(0);
               cell.appendChild(overlay);
             }
           }
         }
-        // Path
+
+        // Target indicator
+        if (target) {
+          const cellIndex = (height - 1 - target.y) * width + target.x;
+          const cell = boardElement.children[cellIndex];
+          const overlay = document.createElement("div");
+          overlay.className = "debug-overlay";
+          overlay.style.position = "absolute";
+          overlay.style.top = "50%";
+          overlay.style.left = "50%";
+          overlay.style.transform = "translate(-50%, -50%)";
+          overlay.style.zIndex = "5";
+          overlay.style.border =
+            "4px solid #fff" + (debugData.longMode ? " dashed" : "");
+          overlay.style.borderRadius = "10px";
+          overlay.style.width = "90%";
+          overlay.style.height = "90%";
+          cell.appendChild(overlay);
+        }
+
+        // Path line on canvas
         if (path && path.length > 1) {
-          ctx.strokeStyle = "blue";
-          ctx.lineWidth = 3;
+          ctx.strokeStyle = "#0300bd";
+          ctx.lineWidth = 4;
+          ctx.setLineDash(debugData.pathType === "survival" ? [8, 5] : []);
           ctx.beginPath();
           for (let i = 0; i < path.length; i++) {
             const p = path[i];
@@ -712,6 +888,7 @@ Press Render Board to calculate safe moves.</pre
             else ctx.lineTo(cx, cy);
           }
           ctx.stroke();
+          ctx.setLineDash([]);
         }
       }
 

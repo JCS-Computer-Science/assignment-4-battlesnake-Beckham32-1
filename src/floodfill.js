@@ -6,7 +6,14 @@ export default function flood(snake) {
   // Mark hazards as dangerous (1)
   if (snake.board.hazards) {
     for (const hazard of snake.board.hazards) {
-      grid[(hazard.x, hazard.y)] = 1;
+      if (
+        hazard.x >= 0 &&
+        hazard.x < grid.length &&
+        hazard.y >= 0 &&
+        hazard.y < grid[0].length
+      ) {
+        grid[hazard.x][hazard.y] = 1;
+      }
     }
   }
 

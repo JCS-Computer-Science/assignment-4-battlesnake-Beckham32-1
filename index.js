@@ -18,43 +18,44 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
+app.use(express.static(__dirname));
 const config = {
-	apiversion: "1",
-	author: "PreV1",
-	color: "#3479b1",
-	head: "all-seeing",
-	tail: "mystic-moon",
+  apiversion: "1",
+  author: "PreV2",
+  color: "#3479b1",
+  head: "all-seeing",
+  tail: "mystic-moon",
 };
 
 app.get("/", (req, res) => {
-	res.json(config);
+  res.json(config);
 });
 
 app.get("/debug", (req, res) => {
-	res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
 app.post("/start", (req, res) => {
-	res.sendStatus(200);
+  res.sendStatus(200);
 });
 
 //TODO: respond to POST requests on "/move". Your response should be an object with a "move" property and optionally
 //      a "shout" property. The request body again contains objects representing the game state
 //      https://docs.battlesnake.com/api/requests/move
 app.post("/move", (req, res) => {
-	res.json(move(req.body))
-})
+  res.json(move(req.body));
+});
 
 //TODO: respond to POST requests on "/end", which signals the end of a game. Your response itself is ignored,
 //      but must have status code "200" the request body will contain objects representing the game
 //      https://docs.battlesnake.com/api/requests/end
 app.post("/end", (req, res) => {
-	res.sendStatus(200);
+  res.sendStatus(200);
 });
 
 const host = "0.0.0.0";
 const port = process.env.PORT || 8000;
 
 app.listen(port, host, () => {
-	console.log(`Running Battlesnake at http://${host}:${port}...`);
+  console.log(`Running Battlesnake at http://${host}:${port}...`);
 });

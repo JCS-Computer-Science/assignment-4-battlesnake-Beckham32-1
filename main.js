@@ -11,29 +11,12 @@ export default function move(gameState) {
     moves: { left: true, right: true, up: true, down: true },
     scores: { left: 0, right: 0, up: 0, down: 0 },
   };
-
-  // Run scoring to populate snake.scores
-  score(snake);
-
-  // Find the move with the highest score
-  let best_move = "up"; // default fallback
-  let best_score = -Infinity;
-  for (const [move, move_score] of Object.entries(snake.scores)) {
-    if (move_score > best_score) {
-      best_score = move_score;
-      best_move = move;
-    }
-  }
-
-  const { blocked, target, scores: score_grid, path } = debug(snake);
+  
+  const best_move = score(snake);
+  const debug_info = debug(snake);
 
   return {
     move: best_move,
-    debug: {
-      blocked,
-      target,
-      scores: score_grid,
-      path,
-    },
+    debug: debug_info,
   };
 }

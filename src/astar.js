@@ -14,7 +14,7 @@ class Astar {
     }
   }
 
-  static run(snake, targets, grid) {
+  static run(snake, targets, grid, options = {}) {
     if (
       !Array.isArray(grid) &&
       Array.isArray(targets) &&
@@ -25,19 +25,29 @@ class Astar {
       targets = null;
     }
 
+    options = {
+      safeThreshold: 0.8,
+      longMode: false,
+      survival: false,
+      disregardFood: false,
+      ...options,
+    };
+
     if (!grid || !grid.length) {
       return [];
     }
 
+    const width = grid.length;
+    const height = grid[0].length;
     const searchableGrid = grid.map((column) =>
       column.map((cell) => (cell === 0 ? 1 : 0)),
     );
 
     if (
       snake.head.x < 0 ||
-      snake.head.x >= searchableGrid.length ||
+      snake.head.x >= width ||
       snake.head.y < 0 ||
-      snake.head.y >= searchableGrid[0].length
+      snake.head.y >= height
     ) {
       return [];
     }
@@ -49,15 +59,18 @@ class Astar {
     const targetPoints = targets
       ? targets
           .map((target) => {
+            if (target && typeof target.type === "string") {
+              return { x: target.x, y: target.y, type: target.type };
+            }
+            if (target && target.head) {
+              return { x: target.head.x, y: target.head.y, type: "enemy" };
+            }
             if (
               target &&
               typeof target.x === "number" &&
               typeof target.y === "number"
             ) {
               return { x: target.x, y: target.y, type: "food" };
-            }
-            if (target && target.head) {
-              return { x: target.head.x, y: target.head.y, type: "enemy" };
             }
             return null;
           })
@@ -94,16 +107,51 @@ class Astar {
         }
 
         const path = Astar.search(graph.nodes, start, end);
-        return path.length ? { path, target } : null;
+        return path.length
+          ? { path, target, willEat: target.type === "food" }
+          : null;
       })
       .filter(Boolean);
 
-    if (!possiblePaths.length) {
+    const validPaths = possiblePaths.filter((candidate) =>
+      Astar.isSafePath(
+        snake,
+        candidate.path,
+        grid,
+        options.safeThreshold,
+        candidate.willEat,
+      ),
+    );
+
+    const hasFoodTargets = targetPoints.some(
+      (target) => target.type === "food",
+    );
+
+    if (!validPaths.length && hasFoodTargets) {
+      const survivalPath = Astar.findSurvivalPath(snake, grid, {
+        ...options,
+        disregardFood: true,
+      });
+      if (survivalPath.length) {
+        return survivalPath;
+      }
+    }
+
+    const paths = validPaths.length ? validPaths : possiblePaths;
+    if (!paths.length) {
+      if (options.survival || targetPoints.length === 0) {
+        return Astar.findSurvivalPath(snake, grid, options);
+      }
       return [];
     }
 
-    possiblePaths.sort((a, b) => a.path.length - b.path.length);
-    return possiblePaths[0].path;
+    const useLongMode = options.longMode || Astar.isLongMode(snake);
+    paths.sort((a, b) =>
+      useLongMode
+        ? b.path.length - a.path.length
+        : a.path.length - b.path.length,
+    );
+    return paths[0].path;
   }
 
   static heap() {
@@ -220,6 +268,184 @@ class Astar {
     }
 
     return ret;
+  }
+
+  static isLongMode(snake) {
+    if (snake.health < 50) {
+      return false;
+    }
+
+    const longThreshold = 25;
+    return snake.body.length >= longThreshold;
+  }
+
+  static inBounds(grid, x, y) {
+    return x >= 0 && x < grid.length && y >= 0 && y < grid[0].length;
+  }
+
+  static cloneGrid(grid) {
+    return grid.map((column) => column.slice());
+  }
+
+  static countReachableCells(grid, startX, startY) {
+    if (!Astar.inBounds(grid, startX, startY)) {
+      return 0;
+    }
+
+    const visited = Array.from({ length: grid.length }, () =>
+      Array(grid[0].length).fill(false),
+    );
+    const queue = [{ x: startX, y: startY }];
+    let count = 0;
+
+    visited[startX][startY] = true;
+    while (queue.length) {
+      const { x, y } = queue.shift();
+      if (grid[x][y] === 1) {
+        continue;
+      }
+
+      count++;
+      const neighbors = [
+        { x: x + 1, y },
+        { x: x - 1, y },
+        { x, y: y + 1 },
+        { x, y: y - 1 },
+      ];
+
+      for (const next of neighbors) {
+        if (Astar.inBounds(grid, next.x, next.y) && !visited[next.x][next.y]) {
+          visited[next.x][next.y] = true;
+          queue.push(next);
+        }
+      }
+    }
+
+    return count;
+  }
+
+  static simulateProjectedGrid(snake, path, initialGrid, willEat) {
+    const projected = Astar.cloneGrid(initialGrid);
+    const body = snake.body.map((part) => ({ x: part.x, y: part.y }));
+
+    for (let i = 0; i < path.length; i++) {
+      const step = path[i];
+      body.unshift({ x: step.x, y: step.y });
+      if (Astar.inBounds(projected, step.x, step.y)) {
+        projected[step.x][step.y] = 1;
+      }
+
+      const isLastStep = i === path.length - 1;
+      if (!willEat || !isLastStep) {
+        const tail = body.pop();
+        if (
+          Astar.inBounds(projected, tail.x, tail.y) &&
+          (tail.x !== step.x || tail.y !== step.y)
+        ) {
+          projected[tail.x][tail.y] = 0;
+        }
+      }
+    }
+
+    return projected;
+  }
+
+  static isSafePath(snake, path, grid, threshold, willEat) {
+    if (!path.length) {
+      return false;
+    }
+
+    const end = path[path.length - 1];
+    const projectedGrid = Astar.simulateProjectedGrid(
+      snake,
+      path,
+      grid,
+      willEat,
+    );
+
+    if (Astar.inBounds(projectedGrid, end.x, end.y)) {
+      projectedGrid[end.x][end.y] = 0;
+    }
+
+    const reachable = Astar.countReachableCells(projectedGrid, end.x, end.y);
+    const total = projectedGrid.length * projectedGrid[0].length;
+    return reachable >= threshold * total;
+  }
+
+  static findSurvivalPath(snake, grid, options = {}) {
+    const width = grid.length;
+    const height = grid[0].length;
+    const visited = Array.from({ length: width }, () =>
+      Array(height).fill(false),
+    );
+    const parent = Array.from({ length: width }, () =>
+      Array(height).fill(null),
+    );
+    const queue = [{ x: snake.head.x, y: snake.head.y }];
+
+    visited[snake.head.x][snake.head.y] = true;
+
+    const foodSet = new Set();
+    if (snake.board.food && options.disregardFood) {
+      for (const food of snake.board.food) {
+        foodSet.add(`${food.x},${food.y}`);
+      }
+    }
+
+    let farthest = { x: snake.head.x, y: snake.head.y, dist: 0 };
+    let currentDistance = 0;
+    let layerCount = queue.length;
+
+    while (queue.length) {
+      const current = queue.shift();
+      layerCount--;
+      const coordKey = `${current.x},${current.y}`;
+      if (
+        grid[current.x][current.y] === 0 &&
+        (!foodSet.size || !foodSet.has(coordKey))
+      ) {
+        if (currentDistance >= farthest.dist) {
+          farthest = { x: current.x, y: current.y, dist: currentDistance };
+        }
+      }
+
+      const neighbors = [
+        { x: current.x + 1, y: current.y },
+        { x: current.x - 1, y: current.y },
+        { x: current.x, y: current.y + 1 },
+        { x: current.x, y: current.y - 1 },
+      ];
+
+      for (const next of neighbors) {
+        if (
+          Astar.inBounds(grid, next.x, next.y) &&
+          !visited[next.x][next.y] &&
+          grid[next.x][next.y] === 0
+        ) {
+          visited[next.x][next.y] = true;
+          parent[next.x][next.y] = current;
+          queue.push(next);
+        }
+      }
+
+      if (layerCount === 0) {
+        layerCount = queue.length;
+        currentDistance++;
+      }
+    }
+
+    if (farthest.dist === 0) {
+      return [];
+    }
+
+    const path = [];
+    let cursor = { x: farthest.x, y: farthest.y };
+    while (cursor && (cursor.x !== snake.head.x || cursor.y !== snake.head.y)) {
+      path.push(cursor);
+      cursor = parent[cursor.x][cursor.y];
+    }
+
+    return path.reverse();
   }
 }
 
