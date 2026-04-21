@@ -76,9 +76,9 @@ const move_analysis = document.getElementById("moveAnalysis");
 let show_debug = false;
 let debug_data = null;
 
-const get_cell_key = (x, y) => `${x},${y}`;
+const getCellKey = (x, y) => `${x},${y}`;
 
-function get_safe_moves(state) {
+function getSafeMoves(state) {
   const head = state.you.head;
   const width = state.board.width;
   const height = state.board.height;
@@ -86,24 +86,24 @@ function get_safe_moves(state) {
 
   state.board.snakes.forEach((snake) => {
     snake.body.forEach((segment) =>
-      blocked.add(get_cell_key(segment.x, segment.y)),
+      blocked.add(getCellKey(segment.x, segment.y)),
     );
   });
   if (state.board.hazards) {
     state.board.hazards.forEach((hazard) =>
-      blocked.add(get_cell_key(hazard.x, hazard.y)),
+      blocked.add(getCellKey(hazard.x, hazard.y)),
     );
   }
 
   return {
-    up: head.y + 1 < height && !blocked.has(get_cell_key(head.x, head.y + 1)),
-    down: head.y - 1 >= 0 && !blocked.has(get_cell_key(head.x, head.y - 1)),
-    left: head.x - 1 >= 0 && !blocked.has(get_cell_key(head.x - 1, head.y)),
-    right: head.x + 1 < width && !blocked.has(get_cell_key(head.x + 1, head.y)),
+    up: head.y + 1 < height && !blocked.has(getCellKey(head.x, head.y + 1)),
+    down: head.y - 1 >= 0 && !blocked.has(getCellKey(head.x, head.y - 1)),
+    left: head.x - 1 >= 0 && !blocked.has(getCellKey(head.x - 1, head.y)),
+    right: head.x + 1 < width && !blocked.has(getCellKey(head.x + 1, head.y)),
   };
 }
 
-function render_board() {
+function renderBoard() {
   const { board, you } = sample_state;
   const width = board.width;
   const height = board.height;
@@ -117,16 +117,16 @@ function render_board() {
   // Randomize snakes if not done
   if (!sample_state.randomized) {
     board.snakes.forEach((snake) => {
-      let headX, headY;
+      let head_x, head_y;
       do {
-        headX = Math.floor(Math.random() * width);
-        headY = Math.floor(Math.random() * height);
-      } while (headX < 0 || headX >= width || headY < 0 || headY >= height);
-      snake.head = { x: headX, y: headY };
+        head_x = Math.floor(Math.random() * width);
+        head_y = Math.floor(Math.random() * height);
+      } while (head_x < 0 || head_x >= width || head_y < 0 || head_y >= height);
+      snake.head = { x: head_x, y: head_y };
       snake.body = [
-        { x: headX, y: headY },
-        { x: headX, y: headY - 1 },
-        { x: headX, y: headY - 2 },
+        { x: head_x, y: head_y },
+        { x: head_x, y: head_y - 1 },
+        { x: head_x, y: head_y - 2 },
       ];
       snake.length = snake.body.length;
     });
@@ -137,31 +137,31 @@ function render_board() {
   // Generate food if not present
   if (board.food.length === 0) {
     for (let i = 0; i < 3; i++) {
-      let foodX, foodY;
+      let food_x, food_y;
       let occupied;
       do {
-        foodX = Math.floor(Math.random() * width);
-        foodY = Math.floor(Math.random() * height);
+        food_x = Math.floor(Math.random() * width);
+        food_y = Math.floor(Math.random() * height);
         occupied = board.snakes.some((snake) =>
-          snake.body.some((part) => part.x === foodX && part.y === foodY),
+          snake.body.some((part) => part.x === food_x && part.y === food_y),
         );
       } while (occupied);
-      board.food.push({ x: foodX, y: foodY });
+      board.food.push({ x: food_x, y: food_y });
     }
   }
 
-  const cellMap = new Map();
+  const cell_map = new Map();
   board.food.forEach((food) =>
-    cellMap.set(get_cell_key(food.x, food.y), "food"),
+    cell_map.set(getCellKey(food.x, food.y), "food"),
   );
   if (board.hazards) {
     board.hazards.forEach((hazard) =>
-      cellMap.set(get_cell_key(hazard.x, hazard.y), "hazard"),
+      cell_map.set(getCellKey(hazard.x, hazard.y), "hazard"),
     );
   }
   board.snakes.forEach((snake) => {
     snake.body.forEach((segment, index) => {
-      const key = get_cell_key(segment.x, segment.y);
+      const key = getCellKey(segment.x, segment.y);
       const type =
         snake.id === sample_state.you.id
           ? index === 0
@@ -170,14 +170,14 @@ function render_board() {
           : index === 0
             ? "enemy-head"
             : "enemy-body";
-      cellMap.set(key, type);
+      cell_map.set(key, type);
     });
   });
 
   for (let y = height - 1; y >= 0; y--) {
     for (let x = 0; x < width; x++) {
-      const key = get_cell_key(x, y);
-      const type = cellMap.get(key) || "empty";
+      const key = getCellKey(x, y);
+      const type = cell_map.get(key) || "empty";
       const cell = document.createElement("div");
       cell.className = `cell ${type}`;
       cell.textContent =
@@ -192,37 +192,37 @@ function render_board() {
                 : type === "you-body" || type === "enemy-body"
                   ? "•"
                   : "";
-      boardElement.appendChild(cell);
+      board_element.appendChild(cell);
     }
   }
 
-  const safeMoves = getSafeMoves(sample_state);
-  const safeStrings = Object.entries(safeMoves)
+  const safe_moves = getSafeMoves(sample_state);
+  const safe_strings = Object.entries(safe_moves)
     .map(
       ([direction, allowed]) =>
         `${direction.toUpperCase()}: ${allowed ? "SAFE" : "BLOCKED"}`,
     )
     .join("\n");
 
-  summaryPanel.innerHTML = `
+  summary_panel.innerHTML = `
                 <div class="item"><strong>Turn</strong><span>${sample_state.turn}</span></div>
                 <div class="item"><strong>Board</strong><span>${width} × ${height}</span></div>
                 <div class="item"><strong>${sample_state.you.name} Health</strong><span>${sample_state.you.health}</span></div>
             `;
 
-  moveAnalysis.textContent =
-    `${safeStrings}\n\n` +
-    (debugData
-      ? `Path: ${debugData.pathType} (${debugData.path.length} steps)\nSafe ratio: ${(
-          debugData.safeRatio * 100
+  move_analysis.textContent =
+    `${safe_strings}\n\n` +
+    (debug_data
+      ? `Path: ${debug_data.path_type} (${debug_data.path.length} steps)\nSafe ratio: ${(
+          debug_data.safe_ratio * 100
         ).toFixed(1)}%`
       : "No debug data available.");
 
-  if (showDebug) renderDebug();
+  if (show_debug) renderDebug();
 }
 
-async function send_move_request() {
-  moveResponse.textContent = "Sending request...";
+async function sendMoveRequest() {
+  move_response.textContent = "Sending request...";
   try {
     const response = await fetch("/move", {
       method: "POST",
@@ -230,14 +230,14 @@ async function send_move_request() {
       body: JSON.stringify(sample_state),
     });
     const data = await response.json();
-    moveResponse.textContent = JSON.stringify(
+    move_response.textContent = JSON.stringify(
       { status: response.status, data },
       null,
       2,
     );
     return data;
   } catch (error) {
-    moveResponse.textContent = `Request failed: ${error.message}`;
+    move_response.textContent = `Request failed: ${error.message}`;
     throw error;
   }
 }
@@ -253,19 +253,19 @@ const direction_vectors = {
   right: { x: 1, y: 0 },
 };
 
-function apply_snake_move(snakeId, move) {
+function applySnakeMove(snake_id, move) {
   const vector = direction_vectors[move];
   if (!vector) {
     throw new Error(`Invalid move received: ${move}`);
   }
 
-  const snake = sample_state.board.snakes.find((s) => s.id === snakeId);
+  const snake = sample_state.board.snakes.find((s) => s.id === snake_id);
   if (!snake) {
-    throw new Error(`Snake not found: ${snakeId}`);
+    throw new Error(`Snake not found: ${snake_id}`);
   }
 
   const head = snake.head;
-  const newHead = {
+  const new_head = {
     x: head.x + vector.x,
     y: head.y + vector.y,
   };
@@ -273,71 +273,71 @@ function apply_snake_move(snakeId, move) {
   const width = sample_state.board.width;
   const height = sample_state.board.height;
   if (
-    newHead.x < 0 ||
-    newHead.x >= width ||
-    newHead.y < 0 ||
-    newHead.y >= height
+    new_head.x < 0 ||
+    new_head.x >= width ||
+    new_head.y < 0 ||
+    new_head.y >= height
   ) {
-    throw new Error(`Snake ${snakeId} moved outside board.`);
+    throw new Error(`Snake ${snake_id} moved outside board.`);
   }
 
-  const foodIndex = sample_state.board.food.findIndex(
-    (food) => food.x === newHead.x && food.y === newHead.y,
+  const food_index = sample_state.board.food.findIndex(
+    (food) => food.x === new_head.x && food.y === new_head.y,
   );
-  const ateFood = foodIndex !== -1;
+  const ate_food = food_index !== -1;
 
   const blocked = new Set();
   sample_state.board.snakes.forEach((s) => {
     s.body.forEach((segment, index) => {
-      const isOwnTail =
-        s.id === snakeId && index === s.body.length - 1 && !ateFood;
-      if (!isOwnTail) {
-        blocked.add(get_cell_key(segment.x, segment.y));
+      const is_own_tail =
+        s.id === snake_id && index === s.body.length - 1 && !ate_food;
+      if (!is_own_tail) {
+        blocked.add(getCellKey(segment.x, segment.y));
       }
     });
   });
   if (sample_state.board.hazards) {
     sample_state.board.hazards.forEach((hazard) =>
-      blocked.add(get_cell_key(hazard.x, hazard.y)),
+      blocked.add(getCellKey(hazard.x, hazard.y)),
     );
   }
 
-  if (blocked.has(get_cell_key(newHead.x, newHead.y))) {
-    throw new Error(`Snake ${snakeId} collided with obstacle.`);
+  if (blocked.has(getCellKey(new_head.x, new_head.y))) {
+    throw new Error(`Snake ${snake_id} collided with obstacle.`);
   }
 
-  const newBody = [{ ...newHead }, ...snake.body];
-  if (!ateFood) {
-    newBody.pop();
+  const new_body = [{ ...new_head }, ...snake.body];
+  if (!ate_food) {
+    new_body.pop();
   } else {
-    sample_state.board.food.splice(foodIndex, 1);
-    let spawnX, spawnY;
+    sample_state.board.food.splice(food_index, 1);
+    let spawn_x, spawn_y;
     let occupied;
     do {
-      spawnX = Math.floor(Math.random() * width);
-      spawnY = Math.floor(Math.random() * height);
+      spawn_x = Math.floor(Math.random() * width);
+      spawn_y = Math.floor(Math.random() * height);
       occupied =
         sample_state.board.snakes.some((s) =>
-          s.body.some((part) => part.x === spawnX && part.y === spawnY),
+          s.body.some((part) => part.x === spawn_x && part.y === spawn_y),
         ) ||
         sample_state.board.food.some(
-          (food) => food.x === spawnX && food.y === spawnY,
+          (food) => food.x === spawn_x && food.y === spawn_y,
         );
     } while (occupied);
-    sample_state.board.food.push({ x: spawnX, y: spawnY });
+    sample_state.board.food.push({ x: spawn_x, y: spawn_y });
   }
 
-  snake.body = newBody;
-  snake.head = { ...newHead };
-  snake.length = newBody.length;
-  snake.health = ateFood ? Math.min(100, snake.health + 20) : snake.health - 1;
+  snake.body = new_body;
+  snake.head = { ...new_head };
+  snake.length = new_body.length;
+  snake.health = ate_food ? Math.min(100, snake.health + 20) : snake.health - 1;
 }
 
-function apply_move(move) {
-  apply_snake_move("you", move);
+function applyMove(move) {
+  applySnakeMove("you", move);
 }
 
-function apply_enemy_moves() {
+function applyEnemyMove() {
   for (const enemy of sample_state.board.snakes) {
     if (enemy.id === "you") continue;
     if (enemy.health <= 0) continue; // Skip dead enemies
@@ -360,8 +360,8 @@ function apply_enemy_moves() {
   }
 }
 
-function kill_snake(snakeId) {
-  const snake = sample_state.board.snakes.find((s) => s.id === snakeId);
+function killSnake(snake_id) {
+  const snake = sample_state.board.snakes.find((s) => s.id === snake_id);
   if (snake) {
     snake.health = 0;
   }
@@ -378,24 +378,24 @@ function processDeaths() {
   // Check for head-to-head collisions
   for (let i = 0; i < sample_state.board.snakes.length; i++) {
     for (let j = i + 1; j < sample_state.board.snakes.length; j++) {
-      const snake1 = sample_state.board.snakes[i];
-      const snake2 = sample_state.board.snakes[j];
+      const snake_1 = sample_state.board.snakes[i];
+      const snake_2 = sample_state.board.snakes[j];
 
       if (
-        snake1.health > 0 &&
-        snake2.health > 0 &&
-        snake1.head.x === snake2.head.x &&
-        snake1.head.y === snake2.head.y
+        snake_1.health > 0 &&
+        snake_2.health > 0 &&
+        snake_1.head.x === snake_2.head.x &&
+        snake_1.head.y === snake_2.head.y
       ) {
         // Head-on collision
-        if (snake1.length > snake2.length) {
-          killSnake(snake2.id);
-        } else if (snake2.length > snake1.length) {
-          killSnake(snake1.id);
+        if (snake_1.length > snake_2.length) {
+          killSnake(snake_2.id);
+        } else if (snake_2.length > snake_1.length) {
+          killSnake(snake_1.id);
         } else {
           // Equal length - both die
-          killSnake(snake1.id);
-          killSnake(snake2.id);
+          killSnake(snake_1.id);
+          killSnake(snake_2.id);
         }
       }
     }
@@ -415,11 +415,11 @@ function processDeaths() {
 }
 
 async function advanceTurn() {
-  if (advanceInProgress) return;
-  advanceInProgress = true;
+  if (advance_in_progress) return;
+  advance_in_progress = true;
   try {
-    const data = await send_move_request();
-    debugData = data.debug;
+    const data = await sendMoveRequest();
+    debug_data = data.debug;
     const move = data?.data?.move ?? data?.move;
     if (!move) {
       throw new Error("Backend response did not include a move.");
@@ -434,51 +434,51 @@ async function advanceTurn() {
     }
 
     // Apply moves for all enemy snakes
-    apply_enemy_moves();
+    applyEnemyMove();
 
     // Process all deaths (starvation, collision, head-on collision)
-    const deathMessage = processDeaths();
-    if (deathMessage) {
-      throw new Error(deathMessage);
+    const death_message = processDeaths();
+    if (death_message) {
+      throw new Error(death_message);
     }
 
     sample_state.turn += 1;
     renderBoard();
   } catch (error) {
-    moveResponse.textContent = `Game loop stopped: ${error.message}`;
+    move_response.textContent = `Game loop stopped: ${error.message}`;
     pauseGameLoop();
   } finally {
-    advanceInProgress = false;
+    advance_in_progress = false;
   }
 }
 
 function renderDebug() {
   // Clear previous overlays
-  boardElement.querySelectorAll(".debug-overlay").forEach((e) => e.remove());
+  board_element.querySelectorAll(".debug-overlay").forEach((e) => e.remove());
   const canvas = document.getElementById("debugCanvas");
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!debugData) return;
-  const { blocked, target, scores, path } = debugData;
+  if (!debug_data) return;
+  const { blocked, target, scores, path } = debug_data;
   const width = sample_state.board.width;
   const height = sample_state.board.height;
 
   // Set canvas size
-  const cellSize = 38;
+  const cell_size = 38;
   const gap = 4;
-  const boardWidth = width * cellSize + (width - 1) * gap;
-  const boardHeight = height * cellSize + (height - 1) * gap;
-  canvas.width = boardWidth;
-  canvas.height = boardHeight;
-  canvas.style.width = boardWidth + "px";
-  canvas.style.height = boardHeight + "px";
+  const board_width = width * cell_size + (width - 1) * gap;
+  const board_height = height * cell_size + (height - 1) * gap;
+  canvas.width = board_width;
+  canvas.height = board_height;
+  canvas.style.width = board_width + "px";
+  canvas.style.height = board_height + "px";
 
   // Build a set of cells categorized by accessibility
-  const blockedCells = new Set(blocked.map((b) => `${b.x},${b.y}`));
-  const redCells = new Set(); // actual edge tiles and cells next to snake bodies
-  const orangeCells = new Set(); // cells adjacent to red
-  const pathCells = new Set(path.map((p) => `${p.x},${p.y}`));
-  const foodCells = new Set(
+  const blocked_cells = new Set(blocked.map((b) => `${b.x},${b.y}`));
+  const red_cells = new Set(); // actual edge tiles and cells next to snake bodies
+  const orange_cells = new Set(); // cells adjacent to red
+  const path_cells = new Set(path.map((p) => `${p.x},${p.y}`));
+  const food_cells = new Set(
     sample_state.board.food.map((f) => `${f.x},${f.y}`),
   );
 
@@ -486,22 +486,22 @@ function renderDebug() {
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
       const cellKey = `${x},${y}`;
-      if (blockedCells.has(cellKey)) continue; // skip blocked cells
+      if (blocked_cells.has(cellKey)) continue; // skip blocked cells
 
-      const distToLeft = x;
-      const distToRight = width - 1 - x;
-      const distToBottom = y;
-      const distToTop = height - 1 - y;
-      const minDistToEdge = Math.min(
-        distToLeft,
-        distToRight,
-        distToBottom,
-        distToTop,
+      const dist_to_left = x;
+      const dist_to_right = width - 1 - x;
+      const dist_to_bottom = y;
+      const dist_to_top = height - 1 - y;
+      const min_dist_to_edge = Math.min(
+        dist_to_left,
+        dist_to_right,
+        dist_to_bottom,
+        dist_to_top,
       );
 
       // Mark as red only if at the actual edge (distance 0)
-      if (minDistToEdge === 0) {
-        redCells.add(cellKey);
+      if (min_dist_to_edge === 0) {
+        red_cells.add(cellKey);
       }
     }
   }
@@ -509,13 +509,13 @@ function renderDebug() {
   // Also mark cells next to snake bodies as red (these are blocked anyway)
   for (const other of sample_state.board.snakes) {
     for (const part of other.body) {
-      redCells.add(`${part.x},${part.y}`);
+      red_cells.add(`${part.x},${part.y}`);
     }
   }
 
   // Mark cells adjacent to red cells as orange (only if not blocked or red)
-  for (const cellKey of redCells) {
-    const [x, y] = cellKey.split(",").map(Number);
+  for (const cell_key of red_cells) {
+    const [x, y] = cell_key.split(",").map(Number);
     const adjacent = [
       [x - 1, y],
       [x + 1, y],
@@ -524,9 +524,9 @@ function renderDebug() {
     ];
     for (const [ax, ay] of adjacent) {
       if (ax >= 0 && ax < width && ay >= 0 && ay < height) {
-        const adjKey = `${ax},${ay}`;
-        if (!blockedCells.has(adjKey) && !redCells.has(adjKey)) {
-          orangeCells.add(adjKey);
+        const adjacent_key = `${ax},${ay}`;
+        if (!blocked_cells.has(adjacent_key) && !red_cells.has(adjacent_key)) {
+          orange_cells.add(adjacent_key);
         }
       }
     }
@@ -535,22 +535,22 @@ function renderDebug() {
   // Render cells with new color scheme
   for (let y = height - 1; y >= 0; y--) {
     for (let x = 0; x < width; x++) {
-      const cellIndex = (height - 1 - y) * width + x;
-      const cell = boardElement.children[cellIndex];
-      const cellKey = `${x},${y}`;
+      const cell_index = (height - 1 - y) * width + x;
+      const cell = board_element.children[cell_index];
+      const cell_key = `${x},${y}`;
 
       // Determine color - priority order matters!
       let color = "#FFD700"; // yellow (default safe)
 
-      if (blockedCells.has(cellKey)) {
+      if (blocked_cells.has(cell_key)) {
         color = "#1A1A1A"; // black (instant death)
-      } else if (foodCells.has(cellKey)) {
+      } else if (food_cells.has(cell_key)) {
         color = "#1BB997"; // teal green (food)
-      } else if (pathCells.has(cellKey) && !foodCells.has(cellKey)) {
+      } else if (path_cells.has(cell_key) && !food_cells.has(cell_key)) {
         color = "#47CF47"; // light green (path)
-      } else if (redCells.has(cellKey)) {
+      } else if (red_cells.has(cell_key)) {
         color = "#BE1010"; // dark red (edges/snake bodies)
-      } else if (orangeCells.has(cellKey)) {
+      } else if (orange_cells.has(cell_key)) {
         color = "#FF8C00"; // orange (adjacent to red)
       }
 
@@ -572,8 +572,8 @@ function renderDebug() {
 
   // Target indicator
   if (target) {
-    const cellIndex = (height - 1 - target.y) * width + target.x;
-    const cell = boardElement.children[cellIndex];
+    const cell_index = (height - 1 - target.y) * width + target.x;
+    const cell = board_element.children[cell_index];
     const overlay = document.createElement("div");
     overlay.className = "debug-overlay";
     overlay.style.position = "absolute";
@@ -582,7 +582,7 @@ function renderDebug() {
     overlay.style.transform = "translate(-50%, -50%)";
     overlay.style.zIndex = "5";
     overlay.style.border =
-      "4px solid #fff" + (debugData.longMode ? " dashed" : "");
+      "4px solid #fff" + (debug_data.longMode ? " dashed" : "");
     overlay.style.borderRadius = "10px";
     overlay.style.width = "90%";
     overlay.style.height = "90%";
@@ -593,12 +593,12 @@ function renderDebug() {
   if (path && path.length > 1) {
     ctx.strokeStyle = "#0300bd";
     ctx.lineWidth = 4;
-    ctx.setLineDash(debugData.pathType === "survival" ? [8, 5] : []);
+    ctx.setLineDash(debug_data.pathType === "survival" ? [8, 5] : []);
     ctx.beginPath();
     for (let i = 0; i < path.length; i++) {
       const p = path[i];
-      const cx = p.x * (cellSize + gap) + cellSize / 2;
-      const cy = (height - 1 - p.y) * (cellSize + gap) + cellSize / 2;
+      const cx = p.x * (cell_size + gap) + cell_size / 2;
+      const cy = (height - 1 - p.y) * (cell_size + gap) + cell_size / 2;
       if (i === 0) ctx.moveTo(cx, cy);
       else ctx.lineTo(cx, cy);
     }
@@ -608,34 +608,34 @@ function renderDebug() {
 }
 
 function startGameLoop() {
-  if (gameLoopInterval) return;
-  gameLoopInterval = setInterval(advanceTurn, loopIntervalMs);
-  moveResponse.textContent = "Game loop running...";
+  if (game_loop_interval) return;
+  game_loop_interval = setInterval(advanceTurn, loop_interval_ms);
+  move_response.textContent = "Game loop running...";
 }
 
 function pauseGameLoop() {
-  if (!gameLoopInterval) return;
-  clearInterval(gameLoopInterval);
-  gameLoopInterval = null;
-  moveResponse.textContent = "Game loop paused.";
+  if (!game_loop_interval) return;
+  clearInterval(game_loop_interval);
+  game_loop_interval = null;
+  move_response.textContent = "Game loop paused.";
 }
 
 document.getElementById("playBtn").addEventListener("click", startGameLoop);
 document.getElementById("pauseBtn").addEventListener("click", pauseGameLoop);
 document.getElementById("stepBtn").addEventListener("click", advanceTurn);
 document.getElementById("debugToggleBtn").addEventListener("click", () => {
-  showDebug = !showDebug;
-  document.getElementById("debugToggleBtn").innerHTML = showDebug
+  show_debug = !show_debug;
+  document.getElementById("debugToggleBtn").innerHTML = show_debug
     ? 'Hide <i class="fas fa-toggle-on"></i>'
     : 'Show <i class="fas fa-toggle-off"></i>';
   renderDebug();
 });
 document.getElementById("speedSlider").addEventListener("input", () => {
-  loopIntervalMs = parseInt(document.getElementById("speedSlider").value);
-  if (gameLoopInterval) {
-    clearInterval(gameLoopInterval);
-    gameLoopInterval = setInterval(advanceTurn, loopIntervalMs);
+  loop_interval_ms = parseInt(document.getElementById("speedSlider").value);
+  if (game_loop_interval) {
+    clearInterval(game_loop_interval);
+    game_loop_interval = setInterval(advanceTurn, loop_interval_ms);
   }
-  document.getElementById("speedValue").textContent = loopIntervalMs + "ms";
+  document.getElementById("speedValue").textContent = loop_interval_ms + "ms";
 });
 renderBoard();
