@@ -13,11 +13,14 @@ export default function move(gameState) {
     scores: { left: 0, right: 0, up: 0, down: 0 },
   };
 
-  const best_move = score(snake); // Find the best move from the scoring function
-  const debug_info = debug(snake); // Returns some basic debug info for use in the front-end
+  let best_move = "up";
+  let debug_info = {};
+
+  best_move = score(snake);
+  debug_info = debug(snake);
 
   return {
     move: best_move,
-    debug: debug_info,
+    debug: debug_info || {},
   };
 }

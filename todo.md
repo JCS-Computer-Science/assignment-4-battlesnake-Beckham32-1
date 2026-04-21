@@ -1,8 +1,6 @@
 # KNOWN BUGS:
-- Snake wants to spin in the middle
-    - Review scoring logic to check it isn't being rewarded too heavily for being in the center
-- After ~800-850 rounds, snake curls in on itself and dies
-    - Likely long mode issue
+- JSON debug parse error (empty array/object?)
+- Snake length undefined
 
 # SIMPLE TODO:
 - Run more testing to determine strange edge cases

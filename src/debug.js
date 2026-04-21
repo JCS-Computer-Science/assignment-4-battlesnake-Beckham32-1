@@ -93,21 +93,17 @@ export default function debug(snake) {
         }
       }
 
-      const test_food_path = astar.run(
-        test_snake,
-        food_targets,
-        test_astar_grid,
-        {
+      const test_food_path =
+        astar.run(test_snake, food_targets, test_astar_grid, {
           safe_threshold: 0.8,
           long_mode: astar.isLongMode(snake),
           survival: true,
-        },
-      );
+        }) || [];
 
       let test_food_score = 0;
       if (will_eat) {
         test_food_score = 1000;
-      } else if (test_food_path.length) {
+      } else if (test_food_path && test_food_path.length) {
         test_food_score = -test_food_path.length * 2;
       }
 

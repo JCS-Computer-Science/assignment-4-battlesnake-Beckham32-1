@@ -44,7 +44,16 @@ class Astar {
       column.map((cell) => (cell === 0 ? 1 : 0)),
     );
 
-    if (collision.general(snake.head.x, snake.head.y, width, height)) return [];
+    // Check if snake head is in bounds
+    if (
+      !snake ||
+      !snake.head ||
+      snake.head.x < 0 ||
+      snake.head.x >= width ||
+      snake.head.y < 0 ||
+      snake.head.y >= height
+    )
+      return [];
 
     searchable_grid[snake.head.x][snake.head.y] = 1;
     const graph = new Graph(searchable_grid);
@@ -77,7 +86,11 @@ class Astar {
             type: "food",
           })),
           ...snake.board.snakes
-            .filter((other) => other.id !== snake.game.you.id)
+            .filter(
+              (other) =>
+                other.id !==
+                (snake.game && snake.game.you ? snake.game.you.id : null),
+            )
             .map((other) => ({
               x: other.head.x,
               y: other.head.y,
@@ -88,7 +101,14 @@ class Astar {
     // For each target, find the path and whether it will eat food
     const possible_paths = target_points
       .map((target) => {
-        if (collision.general(target.x, target.y, width, height)) return null;
+        // Check if target is in bounds
+        if (
+          target.x < 0 ||
+          target.x >= width ||
+          target.y < 0 ||
+          target.y >= height
+        )
+          return null;
 
         const end = graph.nodes[target.x][target.y];
         if (!end || end.isWall()) {
@@ -133,7 +153,12 @@ class Astar {
       return [];
     }
 
-    const use_long_mode = options.long_mode || this.isLongMode(snake);
+    const use_long_mode =
+      options.long_mode === true
+        ? true
+        : options.long_mode === false
+          ? false
+          : this.isLongMode(snake);
     paths.sort((a, b) =>
       use_long_mode
         ? b.path.length - a.path.length

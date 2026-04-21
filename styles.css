@@ -52,8 +52,6 @@ main {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 1rem;
-
 }
 button {
   border: none;
@@ -108,7 +106,7 @@ input[type="range"]::-webkit-slider-thumb {
 #debugCanvas {
   position: absolute;
   top: calc(5% - 1px);
-  left: 10%;
+  left: calc(16% + 1px);
   pointer-events: none;
   z-index: 10;
   background: transparent;
@@ -195,21 +193,33 @@ div.content > section.panel:second-child > div:second-child {
   border-radius: 5px;
   padding: 5px;
 }
-label {
-  font-size: 0.9rem;
-  color: #a8b1cf;
-}
 legend {
   font-size: 0.9rem;
   color: #a8b1cf;
   display: flex;
-  gap: 2rem;
-  margin-left: 0.5rem;
+  margin: 0;
+}
+legend > label:nth-child(1) {
+  margin: 0 0.75rem 0 1rem;
+}
+legend > label:nth-child(2) {
+  margin: 0 1rem 0 1.5rem;
+}
+legend > label:nth-child(3) {
+  margin: 0 1rem 0 1.25rem;
+}
+legend > label:nth-child(4) {
+  margin: 0 1rem 0 1rem;
+}
+legend > label:nth-child(5) {
+  margin: 0 1rem 0 5rem;
 }
 .controls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-bottom: 1rem;
   align-items: center;
 }
+/* #debugCanvas {
+  background: rgba(255, 50, 255, 0.5);
+} */

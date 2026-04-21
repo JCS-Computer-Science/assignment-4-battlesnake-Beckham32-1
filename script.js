@@ -593,7 +593,6 @@ function renderDebug() {
   if (path && path.length > 1) {
     ctx.strokeStyle = "#0300bd";
     ctx.lineWidth = 4;
-    ctx.setLineDash(debug_data.pathType === "survival" ? [8, 5] : []);
     ctx.beginPath();
     for (let i = 0; i < path.length; i++) {
       const p = path[i];
@@ -601,9 +600,12 @@ function renderDebug() {
       const cy = (height - 1 - p.y) * (cell_size + gap) + cell_size / 2;
       if (i === 0) ctx.moveTo(cx, cy);
       else ctx.lineTo(cx, cy);
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, 2, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.moveTo(cx, cy);
+      ctx.stroke();
     }
-    ctx.stroke();
-    ctx.setLineDash([]);
   }
 }
 
@@ -626,8 +628,8 @@ document.getElementById("stepBtn").addEventListener("click", advanceTurn);
 document.getElementById("debugToggleBtn").addEventListener("click", () => {
   show_debug = !show_debug;
   document.getElementById("debugToggleBtn").innerHTML = show_debug
-    ? 'Hide <i class="fas fa-toggle-on"></i>'
-    : 'Show <i class="fas fa-toggle-off"></i>';
+    ? '<i class="fas fa-toggle-on"></i>'
+    : '<i class="fas fa-toggle-off"></i>';
   renderDebug();
 });
 document.getElementById("speedSlider").addEventListener("input", () => {
