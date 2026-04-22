@@ -1,4 +1,4 @@
-import { chaser, foodFinder } from "./src/enemies.js";
+import { chaser, foodFinder } from "../ogsrc/ogenemies.js";
 
 const sample_state = {
   game: { id: "sample-game-123" },

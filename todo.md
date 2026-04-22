@@ -1,6 +1,5 @@
 # KNOWN BUGS:
-- JSON debug parse error (empty array/object?)
-- Snake length undefined
+- Perfect trap avoidance, if the snake knows it is trapped, try to stay alive and maybe tail open up
 
 # SIMPLE TODO:
 - Run more testing to determine strange edge cases

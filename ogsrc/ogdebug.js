@@ -1,5 +1,5 @@
-import flood from "./floodfill.js";
-import { astar } from "./astar.js";
+import flood from "./ogfloodfill.js";
+import { astar } from "./ogastar.js";
 
 export default function debug(snake) {
   const width = snake.board.width;

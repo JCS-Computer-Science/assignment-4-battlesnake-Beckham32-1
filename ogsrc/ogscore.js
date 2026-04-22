@@ -1,6 +1,6 @@
-import flood from "./floodfill.js";
-import { collision } from "./collision.js";
-import { astar } from "./astar.js";
+import flood from "./ogfloodfill.js";
+import { collision } from "./ogcollision.js";
+import { astar } from "./ogastar.js";
 
 // Helper function to check if a move would trap the snake
 function wouldTrap(snake, new_head, dir, will_eat) {

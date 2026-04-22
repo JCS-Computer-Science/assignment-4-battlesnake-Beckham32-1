@@ -1,4 +1,4 @@
-import { collision } from "./collision.js";
+import { collision } from "./ogcollision.js";
 
 class Astar {
   // Initialize the grid nodes for A* search
@@ -137,7 +137,7 @@ class Astar {
     );
 
     if (!valid_paths.length && has_food_targets && !options.ignore_food) {
-      const survival_path = Astar.findSurvivalPath(snake, grid, {
+      const survival_path = this.findSurvivalPath(snake, grid, {
         ...options,
         ignore_food: true,
       });
@@ -149,7 +149,7 @@ class Astar {
     const paths = valid_paths.length ? valid_paths : possible_paths;
     if (!paths.length) {
       if (options.survival || target_points.length === 0)
-        return Astar.findSurvivalPath(snake, grid, options);
+        return this.findSurvivalPath(snake, grid, options);
       return [];
     }
 

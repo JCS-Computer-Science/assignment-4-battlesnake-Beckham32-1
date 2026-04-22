@@ -2,7 +2,7 @@
 // Simple enemy AI behaviors for testing
 // =====================================
 
-import { collision } from "./collision.js";
+import { collision } from "./ogcollision.js";
 
 // Chaser snake: pursue and try to box the largest snake
 // *****************************************************
