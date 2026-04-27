@@ -46,11 +46,16 @@ export default class Score {
     this.space_threshold = phase === "growth" ? 0.8 : 0.6;
 
     // Astar
+    this.astar_grid = Array.from({ length: this.game.board.width}, () =>
+      Array.from({ length: this.game.board.height}, () => 0)
+    );
   }
   run() {
     this.collision(); // Run collision checks to disable invalid moves
 
     this.checkPhase(); // Determine game state and game phase (snake behaviour)
+
+    this.simulatePosition(); // Simulate new head position for each move, check for food, and validate collisions
   }
   collision() {
     this.game.collision.walls();
@@ -111,6 +116,22 @@ export default class Score {
       }
 
       this.astar();
+
+      const food_targets = snake.board.food.map((f) => ({ x: f.x, y: f.y }));
+      const params = {
+        snake: this.game.snake,
+        new_head: this.new_head,
+        will_eat: this.will_eat,
+        temp_body: this.temp_body,
+        temp_snake: this.temp_snake,
+        dir: dir,
+        astar_grid: this.astar_grid,
+        food_targets: food_targets,
+        space_score: this.space_score,
+        is_stalemate: this.is_stalemate,
+        phase: this.phase,
+      }
+      this.scorePhase(params); // Score moves based on game phase and position safety
     }
   }
   wouldTrap() {
@@ -151,5 +172,33 @@ export default class Score {
     this.free_cells =
       this.game.board.width * this.game.board.height - this.occupied_cells;
   }
-  astar() {}
+  astar() {
+    for (const other of this.game.board.snakes) {
+      if (other.id === this.game.state.you.id) continue;
+      for (const part of other.body) {
+        this.astar_grid[part.x][part.y] = 1; // Mark other snakes as obstacles
+      }
+    }
+    for (const part of this.temp_body) {
+      this.astar_grid[part.x][part.y] = 1; // Mark own body as obstacle (except new head)
+    }
+    if (this.game.board.hazards) {
+      for (const hazard of this.game.board.hazards) {
+        this.astar_grid[hazard.x][hazard.y] = 1; // Mark hazards as obstacles
+      }
+    }
+  }
+  scorePhase(params) {
+    switch (params.phase) {
+      case "attack":
+        // Attack logic
+        break;
+      case "growth":
+        // Growth logic
+        break;
+      case "emergency":
+        // Emergency logic
+        break;
+    }
+  }
 }
