@@ -2,8 +2,6 @@
 // Simple enemy AI behaviors for testing
 // =====================================
 
-import { collision } from "./ogcollision.js";
-
 // Chaser snake: pursue and try to box the largest snake
 // *****************************************************
 export function chaser(snake, gameState) {
@@ -67,10 +65,13 @@ function getSmartMove(snake, gameState, target) {
     const new_x = head.x + move.dx;
     const new_y = head.y + move.dy;
     return (
-      collision.general(new_x, new_y, -1, -1) && // Check bounds
-      collision.general(new_x, new_y, width, height) &&
-      collision.general(new_x, new_y, head.x, head.y) && // Check not colliding with self
-      collision.general(new_x, new_y, head.x + move.dx, head.y + move.dy) && // Check not colliding with body
+      // Run collision for bounds and self
+      new_x >= 0 &&
+      new_x < width &&
+      new_y >= 0 &&
+      new_y < height &&
+      new_x !== head.x - move.dx && // Don't reverse into self
+      new_y !== head.y - move.dy &&
       !blocked.has(`${new_x},${new_y}`)
     );
   });

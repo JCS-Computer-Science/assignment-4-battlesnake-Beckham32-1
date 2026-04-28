@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname)); // Comment out to run in Battlesnake.com
+// app.use(express.static(__dirname)); // Comment out to run in Battlesnake.com
 const config = {
   apiversion: "1",
   author: "PreV2",
@@ -39,16 +39,10 @@ app.post("/start", (req, res) => {
   res.sendStatus(200);
 });
 
-//TODO: respond to POST requests on "/move". Your response should be an object with a "move" property and optionally
-//      a "shout" property. The request body again contains objects representing the game state
-//      https://docs.battlesnake.com/api/requests/move
 app.post("/move", (req, res) => {
   res.json(move(req.body));
 });
 
-//TODO: respond to POST requests on "/end", which signals the end of a game. Your response itself is ignored,
-//      but must have status code "200" the request body will contain objects representing the game
-//      https://docs.battlesnake.com/api/requests/end
 app.post("/end", (req, res) => {
   res.sendStatus(200);
 });

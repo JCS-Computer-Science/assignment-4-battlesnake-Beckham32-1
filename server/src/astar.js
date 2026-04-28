@@ -1,4 +1,7 @@
 export default class Astar {
+  constructor(game) {
+    this.game = game;
+  }
   // Initialize the grid nodes for A* search
   init(grid) {
     for (let x = 0, xl = grid.length; x < xl; x++) {
@@ -44,18 +47,18 @@ export default class Astar {
 
     // Check if snake head is in bounds
     if (
-      !snake ||
-      !snake.head ||
-      snake.head.x < 0 ||
-      snake.head.x >= width ||
-      snake.head.y < 0 ||
-      snake.head.y >= height
+      !this.game.snake ||
+      !this.game.snake.head ||
+      this.game.snake.head.x < 0 ||
+      this.game.snake.head.x >= width ||
+      this.game.snake.head.y < 0 ||
+      this.game.snake.head.y >= height
     )
       return [];
 
-    searchable_grid[snake.head.x][snake.head.y] = 1;
+    searchable_grid[this.game.snake.head.x][this.game.snake.head.y] = 1;
     const graph = new Graph(searchable_grid);
-    const start = graph.nodes[snake.head.x][snake.head.y];
+    const start = graph.nodes[this.game.snake.head.x][this.game.snake.head.y];
 
     // Build list of target points based on input targets or default to food and enemy heads
     const target_points = targets
@@ -87,7 +90,7 @@ export default class Astar {
             .filter(
               (other) =>
                 other.id !==
-                (snake.game && snake.game.you ? snake.game.you.id : null),
+                (this.game.state.you ? this.game.state.you.id : null),
             )
             .map((other) => ({
               x: other.head.x,
@@ -122,7 +125,6 @@ export default class Astar {
 
     const valid_paths = possible_paths.filter((candidate) =>
       this.isSafePath(
-        snake,
         candidate.path,
         grid,
         options.safe_threshold,
@@ -135,7 +137,7 @@ export default class Astar {
     );
 
     if (!valid_paths.length && has_food_targets && !options.ignore_food) {
-      const survival_path = this.findSurvivalPath(snake, grid, {
+      const survival_path = this.findSurvivalPath(this.game.snake, grid, {
         ...options,
         ignore_food: true,
       });
@@ -147,7 +149,7 @@ export default class Astar {
     const paths = valid_paths.length ? valid_paths : possible_paths;
     if (!paths.length) {
       if (options.survival || target_points.length === 0)
-        return this.findSurvivalPath(snake, grid, options);
+        return this.findSurvivalPath(this.game.snake, grid, options);
       return [];
     }
 
@@ -156,7 +158,7 @@ export default class Astar {
         ? true
         : options.long_mode === false
           ? false
-          : this.isLongMode(snake);
+          : this.isLongMode(this.game.snake);
     paths.sort((a, b) =>
       use_long_mode
         ? b.path.length - a.path.length
@@ -255,9 +257,9 @@ export default class Astar {
   }
   // Determine if snake is in "long mode" based on its length and health, which can influence pathfinding strategy
   isLongMode(snake) {
-    if (snake.health < 50) return false; // Exit long mode if health is low to prioritize food
+    if (this.game.snake.health < 50) return false; // Exit long mode if health is low to prioritize food
     const long_threshold = 25; // Length threshold to consider snake as long (can be adjusted based on board size and game dynamics)
-    return snake.body.length >= long_threshold;
+    return this.game.snake.body.length >= long_threshold;
   }
   // Check if coordinates are within bounds of the grid
   inBounds(grid, x, y) {
@@ -306,9 +308,9 @@ export default class Astar {
     return count;
   }
   // Simulate the snake's movement along a given path on a projected grid, marking cells as occupied and freeing tail cells as the snake moves, which allows for evaluating future states of the board after taking a path
-  simulateProjectedGrid(snake, path, initial_grid, will_eat) {
+  simulateProjectedGrid(path, initial_grid, will_eat) {
     const projected = this.cloneGrid(initial_grid);
-    const body = snake.body.map((part) => ({ x: part.x, y: part.y }));
+    const body = this.game.snake.body.map((part) => ({ x: part.x, y: part.y }));
 
     // Simulate the snake moving along the path, updating the projected grid to reflect occupied cells and freeing tail cells if not eating food
     for (let i = 0; i < path.length; i++) {
@@ -334,14 +336,13 @@ export default class Astar {
     return projected;
   }
   // Evaluate whether a given path is safe by simulating the snake's movement along the path and counting the number of reachable cells from the end point, ensuring it meets a specified safety threshold to avoid paths that could lead to traps or dead ends
-  isSafePath(snake, path, grid, threshold, will_eat) {
+  isSafePath(path, grid, threshold, will_eat) {
     if (!path.length) {
       return false;
     }
 
     const end = path[path.length - 1];
     const projected_grid = this.simulateProjectedGrid(
-      snake,
       path,
       grid,
       will_eat,
@@ -365,19 +366,19 @@ export default class Astar {
     const parent = Array.from({ length: width }, () =>
       Array(height).fill(null),
     );
-    const queue = [{ x: snake.head.x, y: snake.head.y }];
+    const queue = [{ x: this.game.snake.head.x, y: this.game.snake.head.y }];
 
-    visited[snake.head.x][snake.head.y] = true;
+    visited[this.game.snake.head.x][this.game.snake.head.y] = true;
 
     // Build set of food cells to optionally disregard in survival mode, which can help the snake find paths that maximize open space rather than paths that lead to food which may be surrounded by hazards or enemies
     const food_set = new Set();
-    if (snake.board.food && options.disregardFood) {
-      for (const food of snake.board.food) {
+    if (this.game.board.food && options.disregardFood) {
+      for (const food of this.game.board.food) {
         food_set.add(`${food.x},${food.y}`);
       }
     }
 
-    let farthest = { x: snake.head.x, y: snake.head.y, dist: 0 };
+    let farthest = { x: this.game.snake.head.x, y: this.game.snake.head.y, dist: 0 };
     let current_dist = 0;
     let layer_count = queue.length;
 
@@ -428,7 +429,7 @@ export default class Astar {
     // Reconstruct path from snake's head to the farthest reachable cell found in the BFS
     const path = [];
     let cursor = { x: farthest.x, y: farthest.y };
-    while (cursor && (cursor.x !== snake.head.x || cursor.y !== snake.head.y)) {
+    while (cursor && (cursor.x !== this.game.snake.head.x || cursor.y !== this.game.snake.head.y)) {
       path.push(cursor);
       cursor = parent[cursor.x][cursor.y];
     }

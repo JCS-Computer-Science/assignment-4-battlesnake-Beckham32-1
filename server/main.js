@@ -1,6 +1,6 @@
 import Collision from "./src/collision.js";
-import Astar from "./src/astar.js";
 import FloodFill from "./src/flood/flood.js";
+import Astar from "./src/astar.js";
 import Score from "./src/score/score.js";
 import Debug from "../client/src/debug.js";
 
@@ -23,22 +23,22 @@ class Game {
       scores: { left: 0, right: 0, up: 0, down: 0 },
     };
     this.board = gameState.board;
-    this.best_move = "up"
-    this.debug_info = {}
+    this.best_move = "up";
+    this.debug_info = {};
 
     // References
     this.collision = new Collision(this);
-    this.astar = new Astar(this);
     this.flood = new FloodFill(this);
+    this.astar = new Astar(this);
     this.score = new Score(this);
     this.debug = new Debug(this);
   }
   getMove() {
-    this.best_move = this.score.run();
+    this.best_move = this.score.init();
     return this.best_move;
   }
   getDebug() {
-    this.debug_info = this.debug.get();
+    this.debug_info = this.debug.run();
     return this.debug_info;
   }
 }
