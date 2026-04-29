@@ -1,4 +1,8 @@
-import { chaser, foodFinder } from "../ogsrc/ogenemies.js";
+import { chaser, foodFinder } from "./enemies.js";
+
+document.addEventListener("contextmenu", function (e) {
+  e.preventDefault();
+});
 
 const sample_state = {
   game: { id: "sample-game-123" },
@@ -70,8 +74,7 @@ const sample_state = {
 
 const board_element = document.getElementById("board");
 const summary_panel = document.getElementById("summaryPanel");
-const move_response = document.getElementById("moveResponse");
-const move_analysis = document.getElementById("moveAnalysis");
+const log = document.getElementById("log");
 
 let show_debug = false;
 let debug_data = null;
@@ -110,7 +113,7 @@ function renderBoard() {
 
   board_element.style.setProperty(
     "grid-template-columns",
-    `repeat(${width}, 38px)`,
+    `repeat(${width}, 40px)`,
   );
   board_element.innerHTML = "";
 
@@ -196,33 +199,17 @@ function renderBoard() {
     }
   }
 
-  const safe_moves = getSafeMoves(sample_state);
-  const safe_strings = Object.entries(safe_moves)
-    .map(
-      ([direction, allowed]) =>
-        `${direction.toUpperCase()}: ${allowed ? "SAFE" : "BLOCKED"}`,
-    )
-    .join("\n");
-
   summary_panel.innerHTML = `
                 <div class="item"><strong>Turn</strong><span>${sample_state.turn}</span></div>
                 <div class="item"><strong>Board</strong><span>${width} × ${height}</span></div>
                 <div class="item"><strong>${sample_state.you.name} Health</strong><span>${sample_state.you.health}</span></div>
             `;
 
-  move_analysis.textContent =
-    `${safe_strings}\n\n` +
-    (debug_data
-      ? `Path: ${debug_data.path_type} (${debug_data.path.length} steps)\nSafe ratio: ${(
-          debug_data.safe_ratio * 100
-        ).toFixed(1)}%`
-      : "No debug data available.");
-
   if (show_debug) renderDebug();
 }
 
 async function sendMoveRequest() {
-  move_response.textContent = "Sending request...";
+  log.innerHTML = `<i id="log-check" class="fa-regular fa-circle-check info"></i> Sending request...`;
   try {
     const response = await fetch("/move", {
       method: "POST",
@@ -230,14 +217,10 @@ async function sendMoveRequest() {
       body: JSON.stringify(sample_state),
     });
     const data = await response.json();
-    move_response.textContent = JSON.stringify(
-      { status: response.status, data },
-      null,
-      2,
-    );
+    log.innerHTML = `<i id="log-check" class="fa-regular fa-circle-check success"></i> Request Successful`;
     return data;
   } catch (error) {
-    move_response.textContent = `Request failed: ${error.message}`;
+    log.innerHTML = `<i id="log-check" class="fa-regular fa-circle-xmark error"></i> Error within Request`;
     throw error;
   }
 }
@@ -445,7 +428,7 @@ async function advanceTurn() {
     sample_state.turn += 1;
     renderBoard();
   } catch (error) {
-    move_response.textContent = `Game loop stopped: ${error.message}`;
+    log.innerHTML = `<i id="log-check" class="fa-regular fa-circle-xmark error"></i> Game loop stopped: ${error.message}`;
     pauseGameLoop();
   } finally {
     advance_in_progress = false;
@@ -564,7 +547,6 @@ function renderDebug() {
         overlay.style.width = "100%";
         overlay.style.height = "100%";
         overlay.style.background = color;
-        overlay.style.borderRadius = "4px";
         cell.appendChild(overlay);
       }
     }
@@ -583,7 +565,6 @@ function renderDebug() {
     overlay.style.zIndex = "5";
     overlay.style.border =
       "4px solid #fff" + (debug_data.longMode ? " dashed" : "");
-    overlay.style.borderRadius = "10px";
     overlay.style.width = "90%";
     overlay.style.height = "90%";
     cell.appendChild(overlay);
@@ -612,14 +593,14 @@ function renderDebug() {
 function startGameLoop() {
   if (game_loop_interval) return;
   game_loop_interval = setInterval(advanceTurn, loop_interval_ms);
-  move_response.textContent = "Game loop running...";
+  log.innerHTML = `<i id="log-check" class="fa-regular fa-circle-check info"></i> Game loop running...`;
 }
 
 function pauseGameLoop() {
   if (!game_loop_interval) return;
   clearInterval(game_loop_interval);
   game_loop_interval = null;
-  move_response.textContent = "Game loop paused.";
+  log.innerHTML = `<i id="log-check" class="fa-regular fa-circle-check info"></i> Game loop paused.`;
 }
 
 document.getElementById("playBtn").addEventListener("click", startGameLoop);

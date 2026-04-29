@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 app.use(express.json());
-// app.use(express.static(__dirname)); // Comment out to run in Battlesnake.com
+app.use(express.static(path.join(__dirname, "../client")));
 const config = {
   apiversion: "1",
   author: "PreV2",
@@ -32,7 +32,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/debug", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "../client/index.html"));
 });
 
 app.post("/start", (req, res) => {

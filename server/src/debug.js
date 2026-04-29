@@ -4,8 +4,8 @@ export default class Debug {
 
     this.width = this.game.board.width;
     this.height = this.game.board.height;
-    this.grid = Array.from({ length: width }, () =>
-      Array.from({ length: height }, () => 0),
+    this.grid = Array.from({ length: this.width }, () =>
+      Array.from({ length: this.height }, () => 0),
     );
     this.blocked = [];
 
@@ -16,8 +16,8 @@ export default class Debug {
     this.min_dist = Infinity;
     this.target = null;
 
-    this.score_grid = Array.from({ length: width }, () =>
-      Array.from({ length: height }, () => 0),
+    this.score_grid = Array.from({ length: this.width }, () =>
+      Array.from({ length: this.height }, () => 0),
     );
   }
   run() {
@@ -31,20 +31,20 @@ export default class Debug {
     // Mark blocked cells
     for (const other of this.game.board.snakes) {
       for (const part of other.body) {
-        grid[part.x][part.y] = 1;
+        this.grid[part.x][part.y] = 1;
       }
     }
     // Guard in case gamemode has no hazards
     if (this.game.board.hazards) {
       for (const hazard of this.game.board.hazards) {
-        grid[hazard.x][hazard.y] = 1;
+        this.grid[hazard.x][hazard.y] = 1;
       }
     }
 
     // Any cells the snake has no access to (will kill it)
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
-        if (grid[x][y] === 1) {
+        if (this.grid[x][y] === 1) {
           this.blocked.push({ x, y });
         }
       }
@@ -90,8 +90,8 @@ export default class Debug {
         const test_temp_body = [{ x, y }, ...this.game.snake.body];
         if (!will_eat) test_temp_body.pop();
 
-        const test_astar_grid = Array.from({ length: width }, () =>
-          Array.from({ length: height }, () => 0),
+        const test_astar_grid = Array.from({ length: this.width }, () =>
+          Array.from({ length: this.height }, () => 0),
         );
         for (const other of this.game.board.snakes) {
           if (other.id === this.game.state.you.id) continue;
@@ -111,7 +111,7 @@ export default class Debug {
         const test_food_path =
           this.game.astar.run(test_snake, this.food_targets, test_astar_grid, {
             safe_threshold: 0.8,
-            long_mode: this.game.astar.isLongMode(snake),
+            long_mode: this.game.astar.isLongMode(this.game.snake),
             survival: true,
           }) || [];
 
@@ -123,9 +123,9 @@ export default class Debug {
         }
 
         const dist_to_left = x;
-        const dist_to_right = width - 1 - x;
+        const dist_to_right = this.width - 1 - x;
         const dist_to_bottom = y;
-        const dist_to_top = height - 1 - y;
+        const dist_to_top = this.height - 1 - y;
         const min_dist_to_edge = Math.min(
           dist_to_left,
           dist_to_right,
@@ -147,7 +147,7 @@ export default class Debug {
         survival: false,
       },
     );
-    const effective_path = astar.run(
+    const effective_path = this.game.astar.run(
       this.game.snake,
       this.food_targets,
       this.grid,
@@ -188,14 +188,14 @@ export default class Debug {
     }
 
     return {
-      blocked,
-      target,
-      scores: score_grid,
+      blocked: this.blocked,
+      target: this.target,
+      scores: this.score_grid,
       path: effective_path,
       path_type,
-      long_mode: astar.isLongMode(snake),
+      long_mode: this.game.astar.isLongMode(this.game.snake),
       reachable_cells,
-      total_cells: width * height,
+      total_cells: this.width * this.height,
       safe_ratio,
     };
   }

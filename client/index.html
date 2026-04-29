@@ -11,7 +11,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <header>
@@ -26,13 +26,6 @@
       <div class="content">
         <section class="panel">
           <div class="button-row">
-            <legend>
-              <label for="playBtn">Play</label>
-              <label for="pauseBtn">Pause</label>
-              <label for="stepBtn">Step</label>
-              <label for="debugToggleBtn">Debug</label>
-              <label for="speedSlider">Speed</label>
-            </legend>
             <div class="controls">
               <button id="playBtn"><i class="fas fa-play"></i></button>
               <button id="pauseBtn"><i class="fas fa-pause"></i></button>
@@ -62,22 +55,9 @@
         </section>
         <section class="panel">
           <div>
-            <h2>Debug Output</h2>
-            <p class="status">
-              Click the buttons above to inspect the sample board, review the
-              game state, and test your backend move handling.
-            </p>
-          </div>
-          <div>
             <div>
-              <h3>Safe move analysis</h3>
-              <pre id="moveAnalysis">
-Press Render Board to calculate safe moves.</pre
-              >
-            </div>
-            <div>
-              <h3>Move Response</h3>
-              <pre id="moveResponse">No request sent yet.</pre>
+              <h3>Log</h3>
+              <pre id="log"><i id="log-check" class="fa-regular fa-circle-check info"></i> No request sent yet.</pre>
             </div>
             <div class="footer">
               Debug page available from
@@ -88,6 +68,6 @@ Press Render Board to calculate safe moves.</pre
         </section>
       </div>
     </main>
-    <script type="module" src="script.js"></script>
+    <script type="module" src="./script.js"></script>
   </body>
 </html>

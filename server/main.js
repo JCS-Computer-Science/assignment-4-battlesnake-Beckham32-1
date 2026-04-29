@@ -1,8 +1,8 @@
 import Collision from "./src/collision.js";
-import FloodFill from "./src/flood/flood.js";
+import FloodFill from "./src/floodfill.js";
 import Astar from "./src/astar.js";
-import Score from "./src/score/score.js";
-import Debug from "../client/src/debug.js";
+import Score from "./src/score.js";
+import Debug from "./src/debug.js";
 
 export default function move(gameState) {
   const game = new Game(gameState);

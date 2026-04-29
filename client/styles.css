@@ -5,29 +5,24 @@
 body {
   margin: 0;
   min-height: 100vh;
-  width: 100vw;
-  background: #0e1018;
-  color: #f4f7ff;
+  min-width: 1415px;
+  max-width: 100vw;
   overflow: scroll;
 }
 header {
-  padding: 2.5rem 2rem 0.5rem;
+  padding: 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, #121529 0%, #11131d 100%);
 }
 h1 {
-  margin: 0;
   font-size: clamp(1.8rem, 2.4vw, 2.6rem);
 }
 p {
-  margin: 0.6rem 0 1.5rem;
   color: #a8b1cf;
   max-width: 54rem;
 }
 main {
   display: grid;
   gap: 1rem;
-  padding: 1rem;
   height: 100%;
 }
 .content {
@@ -36,9 +31,7 @@ main {
   gap: 1rem;
 }
 .panel {
-  background: #171b2d;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
   padding: 1.2rem;
   margin-top: 1rem;
   box-shadow: 0 20px 80px rgba(1, 4, 15, 0.22);
@@ -55,43 +48,36 @@ main {
 }
 button {
   border: none;
-  border-radius: 999px;
-  padding: 0.8rem 1.2rem;
+  width: 3rem;
+  height: 3rem;
   font-size: 0.95rem;
   cursor: pointer;
-  background: #2b3364;
   color: #f9fbff;
   transition:
     transform 0.15s ease,
     background 0.15s ease;
 }
 button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   background: #3f4aad;
 }
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  background: #2b3364;
   height: 8px;
-  border-radius: 5px;
-  width: 150px;
+  width: 200px;
   outline: none;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #47c6ff;
+  width: 25px;
+  height: 25px;
   cursor: pointer;
 }
 .board-wrapper {
   position: relative;
   display: inline-block;
-  background: #14172b;
-  border-radius: 14px;
   padding: 24px 12px;
   margin-bottom: 1.5rem;
   width: 95%;
@@ -100,31 +86,28 @@ input[type="range"]::-webkit-slider-thumb {
   display: grid;
   gap: 4px;
   justify-content: center;
-  background: transparent;
   padding: 0;
 }
 #debugCanvas {
   position: absolute;
-  top: calc(5% - 1px);
-  left: calc(16% + 1px);
   pointer-events: none;
   z-index: 10;
-  background: transparent;
+  /* background: rgba(200, 0, 100, 0.5); */
 }
 .cell {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
   font-size: 0.75rem;
   font-weight: 700;
   color: #f8fbff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.05);
   position: relative;
+  text-shadow: 1px 1px #000000;
 }
 .cell.empty {
-  background: #151a2f;
+  background: #19191f;
 }
 .cell.food {
   background: #ff8b30;
@@ -155,13 +138,11 @@ input[type="range"]::-webkit-slider-thumb {
   gap: 0.5rem;
   padding: 0.95rem 1rem;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
 }
 pre {
   margin: 0;
   overflow: scroll;
   background: rgba(255, 255, 255, 0.03);
-  border-radius: 14px;
   max-height: 200px;
   padding: 1rem;
   font-size: 0.86rem;
@@ -189,30 +170,9 @@ div.content > section.panel:second-child > div:second-child {
   gap: 1rem;
 }
 .footer > code {
-  background-color: #12162b;
-  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.03);
+  color: white;
   padding: 5px;
-}
-legend {
-  font-size: 0.9rem;
-  color: #a8b1cf;
-  display: flex;
-  margin: 0;
-}
-legend > label:nth-child(1) {
-  margin: 0 0.75rem 0 1rem;
-}
-legend > label:nth-child(2) {
-  margin: 0 1rem 0 1.5rem;
-}
-legend > label:nth-child(3) {
-  margin: 0 1rem 0 1.25rem;
-}
-legend > label:nth-child(4) {
-  margin: 0 1rem 0 1rem;
-}
-legend > label:nth-child(5) {
-  margin: 0 1rem 0 5rem;
 }
 .controls {
   display: flex;
@@ -220,6 +180,17 @@ legend > label:nth-child(5) {
   gap: 0.75rem;
   align-items: center;
 }
-/* #debugCanvas {
-  background: rgba(255, 50, 255, 0.5);
-} */
+i#log-check {
+  border-radius: 100%;
+  height: 12.5px;
+  width: 12.5px;
+}
+i.info {
+  background-color: rgb(0, 162, 255);
+}
+i.success {
+  background-color: green;
+}
+i.error {
+  background-color: red;
+}

@@ -5,9 +5,9 @@
   "description": "An official Battlesnake template written in JavaScript. Get started at play.battlesnake.com.",
   "license": "MIT",
   "type": "module",
-  "main": "index.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "nodemon index.js",
+    "start": "nodemon server/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
