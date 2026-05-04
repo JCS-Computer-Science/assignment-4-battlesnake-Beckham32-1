@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "../client")));
 const config = {
   apiversion: "1",
-  author: "PreV2",
+  author: "PreV3",
   color: "#3479b1",
   head: "all-seeing",
   tail: "mystic-moon",

@@ -14,7 +14,7 @@ const sample_state = {
     snakes: [
       {
         id: "you",
-        name: "PreV2",
+        name: "PreV3",
         health: 100,
         body: [
           { x: 5, y: 5 },
@@ -59,7 +59,7 @@ const sample_state = {
   },
   you: {
     id: "you",
-    name: "PreV2",
+    name: "PreV3",
     health: 100,
     body: [
       { x: 5, y: 5 },
@@ -139,7 +139,7 @@ function renderBoard() {
 
   // Generate food if not present
   if (board.food.length === 0) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 7; i++) {
       let food_x, food_y;
       let occupied;
       do {
@@ -189,7 +189,7 @@ function renderBoard() {
           : type === "hazard"
             ? "Death"
             : type === "you-head"
-              ? "PreV2"
+              ? "PreV3"
               : type === "enemy-head"
                 ? "Enemy"
                 : type === "you-body" || type === "enemy-body"
@@ -447,7 +447,7 @@ function renderDebug() {
   const height = sample_state.board.height;
 
   // Set canvas size
-  const cell_size = 38;
+  const cell_size = 40;
   const gap = 4;
   const board_width = width * cell_size + (width - 1) * gap;
   const board_height = height * cell_size + (height - 1) * gap;
@@ -575,17 +575,29 @@ function renderDebug() {
     ctx.strokeStyle = "#0300bd";
     ctx.lineWidth = 4;
     ctx.beginPath();
+    
     for (let i = 0; i < path.length; i++) {
       const p = path[i];
       const cx = p.x * (cell_size + gap) + cell_size / 2;
       const cy = (height - 1 - p.y) * (cell_size + gap) + cell_size / 2;
-      if (i === 0) ctx.moveTo(cx, cy);
-      else ctx.lineTo(cx, cy);
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, 2, 0, 2 * Math.PI);
+      
+      if (i === 0) {
+        ctx.moveTo(cx, cy);
+      } else {
+        ctx.lineTo(cx, cy);
+      }
+    }
+    ctx.stroke();
+    
+    // Draw dots at each waypoint
+    ctx.fillStyle = "#0300bd";
+    for (let i = 0; i < path.length; i++) {
+      const p = path[i];
+      const cx = p.x * (cell_size + gap) + cell_size / 2;
+      const cy = (height - 1 - p.y) * (cell_size + gap) + cell_size / 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
       ctx.fill();
-      ctx.moveTo(cx, cy);
-      ctx.stroke();
     }
   }
 }

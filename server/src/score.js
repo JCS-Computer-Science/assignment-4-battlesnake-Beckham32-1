@@ -13,8 +13,7 @@ export default class Score {
           body: { length: 0 },
         },
       );
-    this.is_largest = this.is_largest =
-      this.length > this.largest_opponent.body.length;
+    this.is_largest = this.length > this.largest_opponent.body.length;
 
     // Stalemate Scenario: 2 alive, similar size
     this.alive_snakes = game.board.snakes.length;
@@ -73,14 +72,34 @@ export default class Score {
   }
   // Determine game phase (snake behaviour)
   checkPhase() {
-    if (this.game.snake.health === 100 && this.game.board.food.length > 0) {
-      this.phase = "growth"; // Default phase, snake is growing and should prioritize food
+    // Recalculate dynamic values each turn
+    this.length = this.game.snake.body.length;
+    this.alive_snakes = this.game.board.snakes.length;
+    this.largest_opponent = this.game.board.snakes
+      .filter((snake) => snake.id !== this.game.state.you.id)
+      .reduce(
+        (max, snake) => (snake.body.length > max.body.length ? snake : max),
+        {
+          body: { length: 0 },
+        },
+      );
+    this.is_largest = this.length > this.largest_opponent.body.length;
+    this.size_difference = Math.abs(
+      this.length - this.largest_opponent.body.length,
+    );
+    this.is_stalemate = this.alive_snakes === 2 && this.size_difference <= 3;
+
+    // Emergency phase is highest priority - starvation always comes first
+    if (this.game.snake.health < 40) {
+      this.phase = "emergency";
     }
-    if (this.is_largest && this.alive_snakes > 1) {
-      this.phase = "attack"; // Snake is largest, hunt small snakes
+    // Attack phase when we're the largest
+    else if (this.is_largest && this.alive_snakes > 1) {
+      this.phase = "attack";
     }
-    if (this.game.snake.health < 40 && this.phase === "attack") {
-      this.phase = "emergency"; // Snake is starting to starve, track down food
+    // Default to growth for remaining situations
+    else {
+      this.phase = "growth";
     }
   }
   // Simulates the new head position for each possible move, checks for food, validates collisions, evaluates space safety, runs Astar, and scores based on game phase
@@ -137,8 +156,13 @@ export default class Score {
         y: f.y,
       }));
       this.scorePhase(dir, food_targets); // Score moves based on game phase and position safety
-      return this.findBestMove();
+
+      // Reset grid for next direction evaluation
+      this.astar_grid = Array.from({ length: this.game.board.width }, () =>
+        Array.from({ length: this.game.board.height }, () => 0),
+      );
     }
+    return this.findBestMove();
   }
   // Evaluates the safety of the position by running a flood fill to count free spaces and comparing to occupied cells to determine if this move would trap the snake in a confined area
   spaceSafety() {
@@ -191,17 +215,17 @@ export default class Score {
         const growth_food_path =
           this.game.astar.run(this.temp_snake, food_targets, this.astar_grid, {
             safe_threshold: 0.6,
-            long_mod: false,
+            long_mode: false,
             survival: false,
           }) || [];
 
         this.food_score = this.will_eat
-          ? 2000 // Massive bonus for eating
+          ? 3000 // Massive bonus for eating
           : growth_food_path.length
-            ? -growth_food_path.length * 5 // Penalize long paths
+            ? -growth_food_path.length // Penalize long paths
             : -2000; // Heavy penalty if no path to food
         this.food_score +=
-          growth_food_path && this.isOnPath(growth_food_path) ? 500 : 0; // Reward being on a path towards food
+          growth_food_path && this.isOnPath(growth_food_path) ? 1000 : 0; // Reward being on a path towards food
 
         this.game.snake.scores[dir] = this.food_score + this.space_score * 2;
         break;
@@ -237,20 +261,21 @@ export default class Score {
 
         this.food_score = this.will_eat
           ? 500 // Moderate bonus for eating (lower priority than hunting)
-          : attack_food_path.length &&
-            (this.food_score = attack_food_path.length * 0.5); // Slightly penalize getting too far from food
+          : attack_food_path.length
+            ? -attack_food_path.length * 0.5 // Slightly penalize getting too far from food
+            : -1000; // Penalty if no food path available
 
         this.game.snake.scores[dir] =
           this.center_score +
           this.hunt_score +
           this.food_score +
-          this.space_score * 1;
+          this.space_score;
         break;
       case "emergency":
         // Emergency scoring (emergency phase kicks in when the snake health drops below 50% and forces the snake to go for food [potential for a drop everything and just go for food phase])
         const emergency_food_path =
           this.game.astar.run(this.temp_snake, food_targets, this.astar_grid, {
-            safe_threshold: 0.5,
+            safe_threshold: 0.2,
             long_mode: false,
             survival: true,
           }) || [];
@@ -258,12 +283,12 @@ export default class Score {
         this.food_score = this.will_eat
           ? 5000 // Highest priority
           : emergency_food_path.length
-            ? -emergency_food_path.length * 6 // Heavily penalize long paths
-            : -4000; // Critical if no food path
+            ? emergency_food_path.length
+            : -1500; // Critical if no food path
         this.food_score +=
-          emergency_food_path && this.isOnPath(emergency_food_path) ? 500 : 0; // Reward being on a path towards food
+          emergency_food_path && this.isOnPath(emergency_food_path) ? 2500 : 0; // Reward being on a path towards food
 
-        this.game.snake.scores[dir] = this.food_score + this.space_score * 1;
+        this.game.snake.scores[dir] = this.food_score + this.space_score;
         break;
     }
   }
@@ -322,8 +347,6 @@ export default class Score {
   }
   // Helper to check if the simulated move would trap the snake with no viable next moves
   wouldTrap(position) {
-    if (!this.will_eat) this.temp_body.pop();
-
     // Check all 4 possible next moves from this position
     const potential_moves = [
       { x: position.x, y: position.y + 1, dir: "up" },
@@ -334,7 +357,7 @@ export default class Score {
     let viable_next_moves = 0;
 
     for (const next_move of potential_moves) {
-      if (this.game.collision.isPositionSafe(next_move, this.will_eat)) {
+      if (this.game.collision.isPositionSafe(next_move, true)) {
         viable_next_moves++;
       }
     }

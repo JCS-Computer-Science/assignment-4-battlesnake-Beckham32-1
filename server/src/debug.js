@@ -55,13 +55,30 @@ export default class Debug {
       const dist =
         Math.abs(food.x - this.game.snake.head.x) +
         Math.abs(food.y - this.game.snake.head.y);
-      if (this.dist < this.min_dist) {
-        this.min_dist = this.dist;
-        this.target = this.food;
+      if (dist < this.min_dist) {
+        this.min_dist = dist;
+        this.target = food;
       }
     }
   }
-  // Deprecated, needs to be updated to use new phase system
+  getScoreStats() {
+    let max_score = -Infinity;
+    let min_score = Infinity;
+    let sum = 0;
+    let count = 0;
+    for (let x = 0; x < this.width; x++) {
+      for (let y = 0; y < this.height; y++) {
+        if (this.grid[x][y] === 1) continue; // skip blocked
+        const score = this.score_grid[x][y];
+        if (score > max_score) max_score = score;
+        if (score < min_score) min_score = score;
+        sum += score;
+        count++;
+      }
+    }
+    const avg_score = count > 0 ? sum / count : 0;
+    return { max: max_score, min: min_score, avg: avg_score.toFixed(2) };
+  }
   testScoring() {
     for (let x = 0; x < this.width; x++) {
       for (let y = 0; y < this.height; y++) {
@@ -158,7 +175,7 @@ export default class Debug {
     );
     const path_type = safe_food_path.length ? "safe-food" : "survival";
     if (path_type === "survival" && effective_path.length) {
-      target = effective_path[effective_path.length - 1];
+      this.target = effective_path[effective_path.length - 1];
     }
 
     let reachable_cells = 0;
@@ -197,6 +214,9 @@ export default class Debug {
       reachable_cells,
       total_cells: this.width * this.height,
       safe_ratio,
+      blocked_count: this.blocked.length,
+      food_count: this.food_targets.length,
+      score_stats: this.getScoreStats(),
     };
   }
 }

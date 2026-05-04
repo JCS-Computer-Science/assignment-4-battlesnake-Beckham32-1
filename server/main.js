@@ -23,6 +23,10 @@ class Game {
       scores: { left: 0, right: 0, up: 0, down: 0 },
     };
     this.board = gameState.board;
+    this.board.center = {
+      x: Math.floor(gameState.board.width / 2),
+      y: Math.floor(gameState.board.height / 2),
+    };
     this.best_move = "up";
     this.debug_info = {};
 

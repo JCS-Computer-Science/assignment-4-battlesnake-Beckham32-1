@@ -10,11 +10,11 @@ body {
   overflow: scroll;
 }
 header {
-  padding: 1rem;
+  padding: 0 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 h1 {
-  font-size: clamp(1.8rem, 2.4vw, 2.6rem);
+  font-size: clamp(1rem, 2.4vw, 1.5rem);
 }
 p {
   color: #a8b1cf;
@@ -32,13 +32,13 @@ main {
 }
 .panel {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.2rem;
+  padding: 1rem;
   margin-top: 1rem;
   box-shadow: 0 20px 80px rgba(1, 4, 15, 0.22);
 }
 .panel h2 {
   margin: 1rem 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   letter-spacing: 0.02em;
 }
 .button-row {
@@ -78,7 +78,7 @@ input[type="range"]::-webkit-slider-thumb {
 .board-wrapper {
   position: relative;
   display: inline-block;
-  padding: 24px 12px;
+  padding: 0 12px;
   margin-bottom: 1.5rem;
   width: 95%;
 }
@@ -92,7 +92,10 @@ input[type="range"]::-webkit-slider-thumb {
   position: absolute;
   pointer-events: none;
   z-index: 10;
-  /* background: rgba(200, 0, 100, 0.5); */
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: block;
 }
 .cell {
   width: 40px;
